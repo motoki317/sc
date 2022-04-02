@@ -68,9 +68,11 @@ func TestCache_BackGroundFetch(t *testing.T) {
 				}()
 			}
 			wg.Wait()
-			assert.EqualValues(t, 2, cnt) // NOTE: causes race condition on cnt
 			// assert t=500ms
 			assert.InDelta(t, 500*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+			// Sleep for some time to make sure the background goroutine triggers replaceFn
+			time.Sleep(250 * time.Millisecond)
+			assert.EqualValues(t, 2, cnt) // NOTE: causes race condition on cnt
 		})
 	}
 }
