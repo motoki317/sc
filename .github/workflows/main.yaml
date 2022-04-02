@@ -40,7 +40,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    needs: [build]
     env:
       GOCACHE: "/tmp/go/cache"
     steps:
