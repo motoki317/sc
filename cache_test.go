@@ -76,7 +76,7 @@ func TestNew(t *testing.T) {
 	t.Run("map cache with invalid capacity", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := New[string, string](fn, 2*time.Minute, 1*time.Minute, WithMapBackend(), WithCapacity(-1))
+		_, err := New[string, string](fn, 0, 0, WithMapBackend(), WithCapacity(-1))
 		assert.Error(t, err)
 	})
 
