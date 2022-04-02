@@ -33,9 +33,12 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 	var b backend[K, value[V]]
 	switch config.backend {
 	case cacheBackendMap:
+		if config.capacity < 0 {
+			return nil, errors.New("capacity needs to be non-negative for map cache")
+		}
 		b = &mapBackend[K, value[V]]{m: make(map[K]value[V], config.capacity)}
 	case cacheBackendLRU:
-		if config.capacity == 0 {
+		if config.capacity <= 0 {
 			return nil, errors.New("capacity needs to be greater than 0 for LRU cache")
 		}
 		b = lruBackend[K, value[V]]{lru.NewSync[K, value[V]](lru.WithCapacity(config.capacity))}
