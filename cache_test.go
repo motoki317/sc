@@ -309,14 +309,14 @@ func TestCache_Forget(t *testing.T) {
 
 	for _, c := range cases {
 		c := c
-		t.Run(c.name, func(t *testing.T) {
+		t.Run("interrupt "+c.name, func(t *testing.T) {
 			t.Parallel()
 
 			var cnt int64
 			replaceFn := func(ctx context.Context, key string) (string, error) {
 				assert.Equal(t, "k1", key)
 				atomic.AddInt64(&cnt, 1)
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(750 * time.Millisecond)
 				return "result1", nil
 			}
 			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
@@ -343,9 +343,47 @@ func TestCache_Forget(t *testing.T) {
 				assert.Equal(t, "result1", v)
 			}()
 			wg.Wait()
-			// t=1000ms, assert replaceFn was triggered twice
+			// t=1250ms, assert replaceFn was triggered twice
 			assert.EqualValues(t, 2, cnt)
-			assert.InDelta(t, 1000*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+			assert.InDelta(t, 1250*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+		})
+		t.Run("no interrupt "+c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				assert.Equal(t, "k1", key)
+				atomic.AddInt64(&cnt, 1)
+				time.Sleep(250 * time.Millisecond)
+				return "result1", nil
+			}
+			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			t0 := time.Now()
+			var wg sync.WaitGroup
+			// t=0ms, 1st call
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), "k1")
+				assert.NoError(t, err)
+				assert.Equal(t, "result1", v)
+			}()
+			time.Sleep(500 * time.Millisecond)
+			// t=500ms, Forget, then 2nd call
+			cache.Forget("k1")
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), "k1")
+				assert.NoError(t, err)
+				assert.Equal(t, "result1", v)
+			}()
+			wg.Wait()
+			// t=750ms, assert replaceFn was triggered twice
+			assert.EqualValues(t, 2, cnt)
+			assert.InDelta(t, 750*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
 		})
 	}
 }
