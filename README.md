@@ -1,6 +1,6 @@
 # sc
 
-[![GitHub release](https://img.shields.io/github/release/motoki31/sc.svg)](https://github.com/motoki317/sc/releases/)
+[![GitHub release](https://img.shields.io/github/release/motoki317/sc.svg)](https://github.com/motoki317/sc/releases/)
 ![CI main](https://github.com/motoki317/sc/actions/workflows/main.yaml/badge.svg)
 [![codecov](https://codecov.io/gh/motoki317/sc/branch/main/graph/badge.svg)](https://codecov.io/gh/motoki317/sc)
 [![Go Reference](https://pkg.go.dev/badge/github.com/motoki317/sc.svg)](https://pkg.go.dev/github.com/motoki317/sc)
