@@ -226,18 +226,15 @@ func TestCache_GetFresh(t *testing.T) {
 
 	for _, c := range allCaches {
 		c := c
-		t.Run("normal "+c.name, func(t *testing.T) {
+		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
 			var cnt int64
 			replaceFn := func(ctx context.Context, key string) (string, error) {
-				t.Log("cache.Get(t1, ...)")
 				assert.Equal(t, "k1", key)
-
 				// some expensive op..
 				time.Sleep(500 * time.Millisecond)
 				atomic.AddInt64(&cnt, 1)
-
 				return "result1", nil
 			}
 			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
@@ -264,7 +261,15 @@ func TestCache_GetFresh(t *testing.T) {
 				assert.InDelta(t, 500*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
 			}
 		})
-		t.Run("sync fetch "+c.name, func(t *testing.T) {
+	}
+}
+
+func TestCache_GetFresh_Sync(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
 			var cnt int64
@@ -312,12 +317,12 @@ func TestCache_GetFresh(t *testing.T) {
 	}
 }
 
-func TestCache_Forget(t *testing.T) {
+func TestCache_Forget_Interrupt(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range allCaches {
 		c := c
-		t.Run("interrupt "+c.name, func(t *testing.T) {
+		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
 			var cnt int64
@@ -355,7 +360,15 @@ func TestCache_Forget(t *testing.T) {
 			assert.EqualValues(t, 2, cnt)
 			assert.InDelta(t, 1250*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
 		})
-		t.Run("no interrupt "+c.name, func(t *testing.T) {
+	}
+}
+
+func TestCache_Forget_NoInterrupt(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
 			var cnt int64
