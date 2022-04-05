@@ -2,33 +2,14 @@ package sc
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
-)
-
-type testCase struct {
-	name      string
-	cacheOpts []CacheOption
-}
-
-var (
-	nonStrictCaches = []testCase{
-		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
-		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-	}
-	strictCaches = lo.Map[testCase, testCase](nonStrictCaches, func(t testCase, _ int) testCase {
-		return testCase{
-			name:      "strict " + t.name,
-			cacheOpts: append(append([]CacheOption{}, t.cacheOpts...), EnableStrictCoalescing()),
-		}
-	})
-	allCaches = append(append([]testCase{}, nonStrictCaches...), strictCaches...)
 )
 
 func TestNew(t *testing.T) {
@@ -172,6 +153,108 @@ func TestNew(t *testing.T) {
 	})
 }
 
+func TestCache_GetRandom(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				return "result-" + key, nil
+			}
+			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			keys := newKeys(newZipfian(1.001, 50, 100), 1000)
+			for _, key := range keys {
+				val, err := cache.Get(context.Background(), key)
+				assert.NoError(t, err)
+				assert.Equal(t, "result-"+key, val)
+			}
+		})
+	}
+}
+
+func TestCache_GetRandom_Parallel(t *testing.T) {
+	t.Parallel()
+
+	const (
+		concurrency = 25
+		cacheSize   = 100
+		s           = 1.01
+		v           = 10
+	)
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				time.Sleep(1 * time.Millisecond) // sleep for some time to simulate concurrent access
+				return "result-" + key, nil
+			}
+			cache, err := New[string, string](replaceFn, 10*time.Millisecond, 10*time.Millisecond, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(cacheSize))...)
+			assert.NoError(t, err)
+
+			var wg sync.WaitGroup
+			for i := 0; i < concurrency; i++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					keys := newKeys(newZipfian(s, v, cacheSize*2), cacheSize*10)
+					for _, key := range keys {
+						val, err := cache.Get(context.Background(), key)
+						assert.NoError(t, err)
+						assert.Equal(t, "result-"+key, val)
+					}
+				}()
+			}
+			wg.Wait()
+		})
+	}
+}
+
+func TestCache_GetRandom_Parallel_GracefulReplacement(t *testing.T) {
+	t.Parallel()
+
+	const (
+		concurrency = 25
+		cacheSize   = 100
+		s           = 1.01
+		v           = 10
+	)
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				time.Sleep(1 * time.Millisecond) // sleep for some time to simulate concurrent access
+				return "result-" + key, nil
+			}
+			cache, err := New[string, string](replaceFn, 10*time.Millisecond, 20*time.Millisecond, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(cacheSize))...)
+			assert.NoError(t, err)
+
+			var wg sync.WaitGroup
+			for i := 0; i < concurrency; i++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					keys := newKeys(newZipfian(s, v, cacheSize*2), cacheSize*10)
+					for _, key := range keys {
+						val, err := cache.Get(context.Background(), key)
+						assert.NoError(t, err)
+						assert.Equal(t, "result-"+key, val)
+					}
+				}()
+			}
+			wg.Wait()
+		})
+	}
+}
+
 func TestCache_Get(t *testing.T) {
 	t.Parallel()
 
@@ -219,6 +302,26 @@ func TestCache_Get(t *testing.T) {
 
 func TestCache_GetError(t *testing.T) {
 	t.Parallel()
+
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			targetErr := errors.New("test error")
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				assert.Equal(t, "k1", key)
+				return "", targetErr
+			}
+			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			val, err := cache.Get(context.Background(), "k1")
+			assert.Zero(t, val)
+			assert.Error(t, err)
+			assert.Equal(t, targetErr, err)
+		})
+	}
 }
 
 func TestCache_GetFresh(t *testing.T) {
