@@ -8,7 +8,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+)
+
+type testCase struct {
+	name      string
+	cacheOpts []CacheOption
+}
+
+var (
+	nonStrictCaches = []testCase{
+		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
+		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
+	}
+	strictCaches = lo.Map[testCase, testCase](nonStrictCaches, func(t testCase, _ int) testCase {
+		return testCase{
+			name:      "strict " + t.name,
+			cacheOpts: append(append([]CacheOption{}, t.cacheOpts...), EnableStrictCoalescing()),
+		}
+	})
+	allCaches = append(append([]testCase{}, nonStrictCaches...), strictCaches...)
 )
 
 func TestNew(t *testing.T) {
@@ -155,17 +175,7 @@ func TestNew(t *testing.T) {
 func TestCache_Get(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		name      string
-		cacheOpts []CacheOption
-	}{
-		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
-		{name: "strict map cache", cacheOpts: []CacheOption{WithMapBackend(), EnableStrictCoalescing()}},
-		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-		{name: "strict LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10), EnableStrictCoalescing()}},
-	}
-
-	for _, c := range cases {
+	for _, c := range allCaches {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -207,20 +217,14 @@ func TestCache_Get(t *testing.T) {
 	}
 }
 
+func TestCache_GetError(t *testing.T) {
+	t.Parallel()
+}
+
 func TestCache_GetFresh(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		name      string
-		cacheOpts []CacheOption
-	}{
-		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
-		{name: "strict map cache", cacheOpts: []CacheOption{WithMapBackend(), EnableStrictCoalescing()}},
-		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-		{name: "strict LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10), EnableStrictCoalescing()}},
-	}
-
-	for _, c := range cases {
+	for _, c := range allCaches {
 		c := c
 		t.Run("normal "+c.name, func(t *testing.T) {
 			t.Parallel()
@@ -311,17 +315,7 @@ func TestCache_GetFresh(t *testing.T) {
 func TestCache_Forget(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		name      string
-		cacheOpts []CacheOption
-	}{
-		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
-		{name: "strict map cache", cacheOpts: []CacheOption{WithMapBackend(), EnableStrictCoalescing()}},
-		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-		{name: "strict LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10), EnableStrictCoalescing()}},
-	}
-
-	for _, c := range cases {
+	for _, c := range allCaches {
 		c := c
 		t.Run("interrupt "+c.name, func(t *testing.T) {
 			t.Parallel()
@@ -405,17 +399,7 @@ func TestCache_Forget(t *testing.T) {
 func TestCache_MultipleValues(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		name      string
-		cacheOpts []CacheOption
-	}{
-		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
-		{name: "strict map cache", cacheOpts: []CacheOption{WithMapBackend(), EnableStrictCoalescing()}},
-		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-		{name: "strict LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10), EnableStrictCoalescing()}},
-	}
-
-	for _, c := range cases {
+	for _, c := range allCaches {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

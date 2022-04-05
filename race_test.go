@@ -15,17 +15,7 @@ import (
 func TestCache_BackGroundFetch(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		name      string
-		cacheOpts []CacheOption
-	}{
-		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
-		{name: "strict map cache", cacheOpts: []CacheOption{WithMapBackend(), EnableStrictCoalescing()}},
-		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-		{name: "strict LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10), EnableStrictCoalescing()}},
-	}
-
-	for _, c := range cases {
+	for _, c := range allCaches {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -80,15 +70,7 @@ func TestCache_BackGroundFetch(t *testing.T) {
 func TestCache_NoStrictCoalescing(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		name      string
-		cacheOpts []CacheOption
-	}{
-		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
-		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-	}
-
-	for _, c := range cases {
+	for _, c := range nonStrictCaches {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -174,15 +156,7 @@ func TestCache_NoStrictCoalescing(t *testing.T) {
 func TestCache_StrictCoalescing(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		name      string
-		cacheOpts []CacheOption
-	}{
-		{name: "strict map cache", cacheOpts: []CacheOption{WithMapBackend(), EnableStrictCoalescing()}},
-		{name: "strict LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10), EnableStrictCoalescing()}},
-	}
-
-	for _, c := range cases {
+	for _, c := range strictCaches {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -265,15 +239,7 @@ func TestCache_StrictCoalescing(t *testing.T) {
 func TestCache_ZeroTimeCache(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
-		name      string
-		cacheOpts []CacheOption
-	}{
-		{name: "strict map cache", cacheOpts: []CacheOption{WithMapBackend(), EnableStrictCoalescing()}},
-		{name: "strict LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10), EnableStrictCoalescing()}},
-	}
-
-	for _, c := range cases {
+	for _, c := range strictCaches {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
