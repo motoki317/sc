@@ -100,9 +100,9 @@ func (c *Cache[K, V]) Forget(key K) {
 
 func (c *Cache[K, V]) get(ctx context.Context, key K, needFresh bool) (V, error) {
 	t0 := time.Now()
-retry:
 	val, ok := c.values.Get(key)
 
+retry:
 	// value exists and is fresh - just return
 	if ok && val.isFresh(t0, c.freshFor) {
 		return val.v, nil
@@ -128,10 +128,13 @@ retry:
 	if ok {
 		c.cm.Unlock()
 		cl.wg.Wait()
-		if c.strictCoalescing {
-			goto retry // compare with the time replaceFn was executed to make sure we are always serving a fresh value
+		if c.strictCoalescing && cl.err == nil {
+			// Strict request coalescing: compare with the time replaceFn was executed to make sure we are always
+			// serving fresh values when needed
+			val, ok = cl.val, true // make sure the variables are not shadowed
+			goto retry
 		}
-		return cl.val, cl.err
+		return cl.val.v, cl.err
 	}
 
 	cl = &call[V]{}
@@ -140,17 +143,17 @@ retry:
 	c.cm.Unlock()
 
 	c.set(ctx, cl, key, c.fn)
-	return cl.val, cl.err
+	return cl.val.v, cl.err
 }
 
 func (c *Cache[K, V]) set(ctx context.Context, cl *call[V], key K, fn func(ctx context.Context, key K) (V, error)) {
-	t := time.Now()
-	cl.val, cl.err = fn(ctx, key)
+	cl.val.t = time.Now()
+	cl.val.v, cl.err = fn(ctx, key)
 
-	c.cm.Lock() // careful with the lock order
+	c.cm.Lock()
 	if !cl.forgotten {
 		if cl.err == nil {
-			c.values.Set(key, value[V]{v: cl.val, t: t})
+			c.values.Set(key, cl.val)
 		}
 		delete(c.calls, key) // this deletion needs to be inside 'if !cl.forgotten' block, because there may be a new ongoing call
 	}
