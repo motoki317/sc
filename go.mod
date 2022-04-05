@@ -3,7 +3,7 @@ module github.com/motoki317/sc
 go 1.18
 
 require (
-	github.com/dboslee/lru v0.0.2-0.20220315224841-724ebd8433e2
+	github.com/motoki317/lru v0.0.3
 	github.com/samber/lo v1.11.0
 	github.com/stretchr/testify v1.7.1
 )

@@ -13,13 +13,24 @@ sc is a simple golang in-memory caching library, with easily configurable implem
   - There is no Set() method - this is an intentional design choice to make the use easier.
 - Supports 1.18 generics - both key and value are generic.
   - No `interface{}` even in internal implementations.
-- Supported cache backends
-  - Built-in map (default) - lightweight, but does not evict items.
-  - LRU (`WithLRUBackend(cap)` option) - automatically evicts overflown items.
+- Supports multiple cache backends.
 - Prevents [cache stampede](https://en.wikipedia.org/wiki/Cache_stampede) problem idiomatically.
 - All methods are safe to be called from multiple goroutines.
 - Allows graceful cache replacement (if `freshFor` < `ttl`) - only one goroutine is launched in the background to re-fetch the value.
 - Allows strict request coalescing (`EnableStrictCoalescing()` option) - ensures that all returned values are fresh (a niche use-case).
+
+## Supported cache backends (cache replacement policy)
+
+The default backend is the built-in map.
+This is ultra-lightweight, but does **not** evict items.
+You should only use the built-in map backend if your key's cardinality is finite,
+and you are comfortable holding **all** values in-memory.
+
+Otherwise, you should use LRU or ARC backend which automatically evicts overflown items.
+
+- Built-in map (default)
+- LRU (Least Recently Used)
+- ARC (Adaptive Replacement Cache)
 
 ## Usage
 

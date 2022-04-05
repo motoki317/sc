@@ -3,7 +3,9 @@ package sc
 import (
 	"sync"
 
-	"github.com/dboslee/lru"
+	"github.com/motoki317/lru"
+
+	"github.com/motoki317/sc/arc"
 )
 
 // backend represents a cache backend.
@@ -18,6 +20,7 @@ type backend[K comparable, V any] interface {
 var (
 	_ backend[string, string] = &mapBackend[string, string]{}
 	_ backend[string, string] = lruBackend[string, string]{}
+	_ backend[string, string] = arcBackend[string, string]{}
 )
 
 type mapBackend[K comparable, V any] struct {
@@ -58,4 +61,8 @@ func (l lruBackend[K, V]) Set(key K, v V) {
 
 func (l lruBackend[K, V]) Delete(key K) {
 	l.SyncCache.Delete(key)
+}
+
+type arcBackend[K comparable, V any] struct {
+	*arc.Cache[K, V]
 }

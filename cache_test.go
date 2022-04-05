@@ -114,21 +114,21 @@ func TestNew(t *testing.T) {
 	t.Run("LRU needs capacity set", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := New[string, string](fn, 0, 0, WithLRUBackend(10), WithCapacity(0))
+		_, err := New[string, string](fn, 0, 0, WithLRUBackend(0))
 		assert.Error(t, err)
 	})
 
 	t.Run("LRU cache with invalid capacity", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := New[string, string](fn, 0, 0, WithLRUBackend(10), WithCapacity(-1))
+		_, err := New[string, string](fn, 0, 0, WithLRUBackend(-1))
 		assert.Error(t, err)
 	})
 
 	t.Run("struct LRU needs capacity set", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := New[string, string](fn, 0, 0, WithLRUBackend(10), EnableStrictCoalescing(), WithCapacity(0))
+		_, err := New[string, string](fn, 0, 0, WithLRUBackend(-1), EnableStrictCoalescing())
 		assert.Error(t, err)
 	})
 
@@ -149,6 +149,47 @@ func TestNew(t *testing.T) {
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
 		assert.IsType(t, lruBackend[string, value[string]]{}, c.values)
+		assert.True(t, c.strictCoalescing)
+	})
+
+	t.Run("ARC needs capacity set", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := New[string, string](fn, 0, 0, WithARCBackend(0))
+		assert.Error(t, err)
+	})
+
+	t.Run("ARC cache with invalid capacity", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := New[string, string](fn, 0, 0, WithARCBackend(-1))
+		assert.Error(t, err)
+	})
+
+	t.Run("struct ARC needs capacity set", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := New[string, string](fn, 0, 0, WithARCBackend(0), EnableStrictCoalescing())
+		assert.Error(t, err)
+	})
+
+	t.Run("ARC cache", func(t *testing.T) {
+		t.Parallel()
+
+		c, err := New[string, string](fn, 0, 0, WithARCBackend(10))
+		assert.NoError(t, err)
+		assert.IsType(t, &Cache[string, string]{}, c)
+		assert.IsType(t, arcBackend[string, value[string]]{}, c.values)
+		assert.False(t, c.strictCoalescing)
+	})
+
+	t.Run("strict ARC cache", func(t *testing.T) {
+		t.Parallel()
+
+		c, err := New[string, string](fn, 0, 0, WithARCBackend(10), EnableStrictCoalescing())
+		assert.NoError(t, err)
+		assert.IsType(t, &Cache[string, string]{}, c)
+		assert.IsType(t, arcBackend[string, value[string]]{}, c.values)
 		assert.True(t, c.strictCoalescing)
 	})
 }

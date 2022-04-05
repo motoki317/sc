@@ -13,6 +13,7 @@ type cacheBackendType int
 const (
 	cacheBackendMap cacheBackendType = iota
 	cacheBackendLRU
+	cacheBackendARC
 )
 
 func defaultConfig() cacheConfig {
@@ -44,6 +45,15 @@ func WithMapBackend() CacheOption {
 func WithLRUBackend(capacity int) CacheOption {
 	return func(c *cacheConfig) {
 		c.backend = cacheBackendLRU
+		c.capacity = capacity
+	}
+}
+
+// WithARCBackend specifies to use ARC for storing cache items.
+// Capacity needs to be greater than 0.
+func WithARCBackend(capacity int) CacheOption {
+	return func(c *cacheConfig) {
+		c.backend = cacheBackendARC
 		c.capacity = capacity
 	}
 }

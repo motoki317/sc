@@ -1,9 +1,9 @@
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/dboslee/lru v0.0.2-0.20220315224841-724ebd8433e2 h1:EyebzUzb2UbGg5ofoFzdGl+KADFtxt8ErKAFK7KyZmM=
-github.com/dboslee/lru v0.0.2-0.20220315224841-724ebd8433e2/go.mod h1:vDIFJHUqr1vdYKAdG9x3r+zFWP0i9uJqQWpB6nSuHxM=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
+github.com/motoki317/lru v0.0.3 h1:+WETs/rojxz4y4KVAQM1syZLVQilL/BD1Lxb2uSSQ1A=
+github.com/motoki317/lru v0.0.3/go.mod h1:KWwfc+XCJ4hn+RM4f1+017dyzXWYkHWj6nouX3bU6PM=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
