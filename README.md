@@ -7,6 +7,10 @@
 
 sc is a simple idiomatic in-memory caching library.
 
+## Usage
+
+See [reference](https://pkg.go.dev/github.com/motoki317/sc).
+
 ## Notable Features
 
 - Simple to use: the only methods are `Get()`, `GetFresh()`, and `Forget()`.
@@ -67,10 +71,6 @@ If you still need to use `Set()` for some reason, then this library may not be f
 Since there is no `Set()` method, users cannot set the value on write (no-write-allocate).
 But for similar reasons described above, it is simpler this way and there is less risk of
 probable bugs.
-
-## Usage
-
-See [reference](https://pkg.go.dev/github.com/motoki317/sc).
 
 ## Borrowed Ideas
 
