@@ -29,7 +29,7 @@ func Example() {
 	// Production code should not ignore errors
 	cache, _ := sc.New[string, *Person](retrievePerson, 1*time.Minute, 2*time.Minute, sc.WithLRUBackend(500))
 
-	// Query the values - the cache will automatically trigger 'retrieveMyBigStruct' for each key.
+	// Query the values - the cache will automatically trigger 'retrievePerson' for each key.
 	a, _ := cache.Get(context.Background(), "Alice")
 	b, _ := cache.Get(context.Background(), "Bob")
 	fmt.Println(a) // Use the values...
