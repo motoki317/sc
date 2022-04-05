@@ -72,3 +72,19 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           files: ./coverage.txt
+  bench:
+    name: Bench
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Read Go version
+        run: echo "GO_VERSION=$(cat ./.go-version)" >> $GITHUB_ENV
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install cob
+        run: curl -sfL https://raw.githubusercontent.com/knqyf263/cob/master/install.sh | sudo sh -s -- -b /usr/local/bin
+      - name: Run Benchmark
+        run: CGO_ENABLED=0 cob
