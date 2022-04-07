@@ -8,42 +8,37 @@ import (
 	"github.com/motoki317/sc"
 )
 
-type Person struct {
-	Name string
-	Age  int
+type HeavyData struct {
+	Data string
+	// and all the gazillion fields you may have in your data
 }
 
-func (p Person) String() string {
-	return fmt.Sprintf("%s: %d", p.Name, p.Age)
-}
-
-func retrievePerson(_ context.Context, name string) (*Person, error) {
+func retrieveHeavyData(_ context.Context, name string) (*HeavyData, error) {
 	// Query to database or something...
-	return &Person{
-		Name: name,
-		Age:  25,
+	return &HeavyData{
+		Data: "my-data-" + name,
 	}, nil
 }
 
 func Example() {
-	// Production code should not ignore errors
-	cache, _ := sc.New[string, *Person](retrievePerson, 1*time.Minute, 2*time.Minute, sc.WithLRUBackend(500))
+	// Wrap your 'retrieveHeavyData' function with sc - it will automatically cache the values.
+	// (production code should not ignore errors)
+	cache, _ := sc.New[string, *HeavyData](retrieveHeavyData, 1*time.Minute, 2*time.Minute, sc.WithLRUBackend(500))
 
-	// Query the values - the cache will automatically trigger 'retrievePerson' for each key.
-	a, _ := cache.Get(context.Background(), "Alice")
-	b, _ := cache.Get(context.Background(), "Bob")
-	fmt.Println(a) // Use the values...
-	fmt.Println(b)
+	// Query the values - the cache will automatically trigger 'retrieveHeavyData' for each key.
+	foo, _ := cache.Get(context.Background(), "foo")
+	bar, _ := cache.Get(context.Background(), "bar")
+	fmt.Println(foo.Data) // Use the values...
+	fmt.Println(bar.Data)
 
-	// Previous results are reused
-	a, _ = cache.Get(context.Background(), "Alice")
-	b, _ = cache.Get(context.Background(), "Bob")
-	fmt.Println(a) // Use the values...
-	fmt.Println(b)
-
+	// Previous results are reused, so 'retrieveHeavyData' is called only once for each key in this test.
+	foo, _ = cache.Get(context.Background(), "foo")
+	bar, _ = cache.Get(context.Background(), "bar")
+	fmt.Println(foo.Data) // Use the values...
+	fmt.Println(bar.Data)
 	// Output:
-	// Alice: 25
-	// Bob: 25
-	// Alice: 25
-	// Bob: 25
+	// my-data-foo
+	// my-data-bar
+	// my-data-foo
+	// my-data-bar
 }
