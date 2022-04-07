@@ -96,10 +96,10 @@ func BenchmarkCache_Parallel_Zipfian(b *testing.B) {
 			}
 
 			ctx := context.Background()
-			keys := newKeys(newZipfian(s, v, size*4), size*10)
 			b.RunParallel(func(pb *testing.PB) {
-				for i := 0; pb.Next(); i++ {
-					_, _ = cache.Get(ctx, keys[i%(size*10)])
+				nextKey := newZipfian(s, v, size*4)
+				for pb.Next() {
+					_, _ = cache.Get(ctx, nextKey())
 				}
 			})
 		})
