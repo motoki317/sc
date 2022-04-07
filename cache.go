@@ -38,12 +38,12 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 		if config.capacity < 0 {
 			return nil, errors.New("capacity needs to be non-negative for map cache")
 		}
-		b = &mapBackend[K, value[V]]{m: make(map[K]value[V], config.capacity)}
+		b = mapBackend[K, value[V]](make(map[K]value[V], config.capacity))
 	case cacheBackendLRU:
 		if config.capacity <= 0 {
 			return nil, errors.New("capacity needs to be greater than 0 for LRU cache")
 		}
-		b = lruBackend[K, value[V]]{lru.NewSync[K, value[V]](lru.WithCapacity(config.capacity))}
+		b = lruBackend[K, value[V]]{lru.New[K, value[V]](lru.WithCapacity(config.capacity))}
 	case cacheBackendARC:
 		if config.capacity <= 0 {
 			return nil, errors.New("capacity needs to be greater than 0 for ARC cache")
@@ -72,7 +72,7 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 type Cache[K comparable, V any] struct {
 	values           backend[K, value[V]]
 	calls            map[K]*call[V]
-	cm               sync.Mutex // cm protects calls
+	mu               sync.Mutex // mu protects values and calls
 	fn               replaceFunc[K, V]
 	freshFor, ttl    time.Duration
 	strictCoalescing bool
@@ -96,28 +96,30 @@ func (c *Cache[K, V]) GetFresh(ctx context.Context, key K) (V, error) {
 // Corresponding item will be deleted, ongoing cache replacement results (if any) will not be added to the cache,
 // and any future Get and GetFresh calls will immediately retrieve a new item.
 func (c *Cache[K, V]) Forget(key K) {
-	c.cm.Lock()
+	c.mu.Lock()
 	if ca, ok := c.calls[key]; ok {
 		ca.forgotten = true
 	}
 	delete(c.calls, key)
 	c.values.Delete(key)
-	c.cm.Unlock()
+	c.mu.Unlock()
 }
 
 func (c *Cache[K, V]) get(ctx context.Context, key K, needFresh bool) (V, error) {
+	// Record time as soon as Get or GetFresh is called *before acquiring the lock* - this maximizes the reuse of values
 	t0 := time.Now()
+	c.mu.Lock()
 	val, ok := c.values.Get(key)
 
 retry:
 	// value exists and is fresh - just return
 	if ok && val.isFresh(t0, c.freshFor) {
+		c.mu.Unlock()
 		return val.v, nil
 	}
 
 	// value exists and is stale, and we're OK with serving it stale while updating in the background
 	if ok && !needFresh && !val.isExpired(t0, c.ttl) {
-		c.cm.Lock()
 		cl, ok := c.calls[key]
 		if !ok {
 			cl = &call[V]{}
@@ -125,20 +127,20 @@ retry:
 			c.calls[key] = cl
 			go c.set(ctx, cl, key, c.fn)
 		}
-		c.cm.Unlock()
+		c.mu.Unlock()
 		return val.v, nil // serve stale contents
 	}
 
 	// value doesn't exist or is expired, or is stale, and we need it fresh - sync update
-	c.cm.Lock()
 	cl, ok := c.calls[key]
 	if ok {
-		c.cm.Unlock()
-		cl.wg.Wait()
+		c.mu.Unlock()
+		cl.wg.Wait() // make sure not to hold lock while waiting for value
 		if c.strictCoalescing && cl.err == nil {
 			// Strict request coalescing: compare with the time replaceFn was executed to make sure we are always
 			// serving fresh values when needed
 			val, ok = cl.val, true // make sure the variables are not shadowed
+			c.mu.Lock()            // careful with goto statement - retry is inside critical section
 			goto retry
 		}
 		return cl.val.v, cl.err
@@ -147,23 +149,24 @@ retry:
 	cl = &call[V]{}
 	cl.wg.Add(1)
 	c.calls[key] = cl
-	c.cm.Unlock()
+	c.mu.Unlock()
 
-	c.set(ctx, cl, key, c.fn)
+	c.set(ctx, cl, key, c.fn) // make sure not to hold lock while waiting for value
 	return cl.val.v, cl.err
 }
 
 func (c *Cache[K, V]) set(ctx context.Context, cl *call[V], key K, fn func(ctx context.Context, key K) (V, error)) {
+	// Record time *just before* fn() is called - this maximizes the reuse of values
 	cl.val.t = time.Now()
 	cl.val.v, cl.err = fn(ctx, key)
 
-	c.cm.Lock()
+	c.mu.Lock()
 	if !cl.forgotten {
 		if cl.err == nil {
 			c.values.Set(key, cl.val)
 		}
 		delete(c.calls, key) // this deletion needs to be inside 'if !cl.forgotten' block, because there may be a new ongoing call
 	}
-	c.cm.Unlock()
+	c.mu.Unlock()
 	cl.wg.Done()
 }

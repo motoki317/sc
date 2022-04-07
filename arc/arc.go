@@ -1,8 +1,6 @@
 package arc
 
 import (
-	"sync"
-
 	"github.com/motoki317/lru"
 )
 
@@ -25,8 +23,6 @@ type Cache[K comparable, V any] struct {
 
 	t2 *lru.Cache[K, V]        // t2 is the LRU for frequently accessed items
 	b2 *lru.Cache[K, struct{}] // b2 is the LRU for evictions from t2
-
-	lock sync.RWMutex
 }
 
 // New creates an ARC of the given size.
@@ -50,9 +46,6 @@ func New[K comparable, V any](size int) *Cache[K, V] {
 
 // Get looks up a key's value from the cache.
 func (c *Cache[K, V]) Get(key K) (value V, ok bool) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	// If the value is contained in T1 (recent), then
 	// promote it to T2 (frequent)
 	if val, ok := c.t1.Peek(key); ok {
@@ -72,9 +65,6 @@ func (c *Cache[K, V]) Get(key K) (value V, ok bool) {
 
 // Set adds a value to the cache.
 func (c *Cache[K, V]) Set(key K, value V) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	// Check if the value is contained in T1 (recent), and potentially
 	// promote it to frequent T2
 	if _, ok := c.t1.Peek(key); ok {
@@ -177,8 +167,6 @@ func (c *Cache[K, V]) replace() {
 
 // Delete is used to purge a key from the cache
 func (c *Cache[K, V]) Delete(key K) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	if c.t1.Delete(key) {
 		return
 	}

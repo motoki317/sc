@@ -23,7 +23,7 @@ func TestNew(t *testing.T) {
 		c, err := New[string, string](fn, 0, 0)
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, &mapBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
 		assert.False(t, c.strictCoalescing)
 	})
 
@@ -70,7 +70,7 @@ func TestNew(t *testing.T) {
 		c, err := New[string, string](fn, 0, 0, WithMapBackend())
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, &mapBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
 		assert.False(t, c.strictCoalescing)
 	})
 
@@ -87,7 +87,7 @@ func TestNew(t *testing.T) {
 		c, err := New[string, string](fn, 0, 0, WithMapBackend(), WithCapacity(10))
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, &mapBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
 		assert.False(t, c.strictCoalescing)
 	})
 
@@ -97,7 +97,7 @@ func TestNew(t *testing.T) {
 		c, err := New[string, string](fn, 0, 0, WithMapBackend(), EnableStrictCoalescing())
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, &mapBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
 		assert.True(t, c.strictCoalescing)
 	})
 
@@ -107,7 +107,7 @@ func TestNew(t *testing.T) {
 		c, err := New[string, string](fn, 0, 0, WithMapBackend(), EnableStrictCoalescing(), WithCapacity(10))
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, &mapBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
 		assert.True(t, c.strictCoalescing)
 	})
 
