@@ -1,8 +1,6 @@
 package tq
 
 import (
-	"sync"
-
 	"github.com/motoki317/lru"
 )
 
@@ -24,7 +22,6 @@ type Cache[K comparable, V any] struct {
 	recent      *lru.Cache[K, V]
 	frequent    *lru.Cache[K, V]
 	recentEvict *lru.Cache[K, struct{}]
-	lock        sync.RWMutex
 }
 
 // New creates a new Cache.
@@ -55,9 +52,6 @@ func New[K comparable, V any](size int) *Cache[K, V] {
 
 // Get looks up a key's value from the cache.
 func (c *Cache[K, V]) Get(key K) (value V, ok bool) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	// Check if this is a frequent value
 	if value, ok = c.frequent.Get(key); ok {
 		return
@@ -77,9 +71,6 @@ func (c *Cache[K, V]) Get(key K) (value V, ok bool) {
 
 // Set adds a value to the cache.
 func (c *Cache[K, V]) Set(key K, value V) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	// Check if the value is frequently used already,
 	// and just update the value
 	if _, ok := c.frequent.Peek(key); ok {
@@ -132,8 +123,6 @@ func (c *Cache[K, V]) ensureSpace(recentEvict bool) {
 
 // Delete removes the provided key from the cache.
 func (c *Cache[K, V]) Delete(key K) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	if c.frequent.Delete(key) {
 		return
 	}
