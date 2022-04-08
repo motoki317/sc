@@ -3,7 +3,7 @@ package sc
 import (
 	"github.com/motoki317/lru"
 
-	"github.com/motoki317/sc/arc"
+	"github.com/motoki317/sc/tq"
 )
 
 // backend represents a cache backend.
@@ -18,7 +18,7 @@ type backend[K comparable, V any] interface {
 var (
 	_ backend[string, string] = mapBackend[string, string]{}
 	_ backend[string, string] = lruBackend[string, string]{}
-	_ backend[string, string] = arcBackend[string, string]{}
+	_ backend[string, string] = twoQueueBackend[string, string]{}
 )
 
 type mapBackend[K comparable, V any] map[K]V
@@ -52,11 +52,11 @@ func (l lruBackend[K, V]) Delete(key K) {
 	l.c.Delete(key) // The signature differs by a bit (lru.Cache returns bool) so we cannot use embedding
 }
 
-// arcBackend represents ARC cache backend.
+// twoQueueBackend represents 2Q cache backend.
 //
 // As of Go 1.18, Go does not allow type alias of generic types, so we cannot write it like below and have to fall back
 // to embedding in a struct.
-// 	type arcBackend[K comparable, V any] = *arc.Cache[K, V]
-type arcBackend[K comparable, V any] struct {
-	*arc.Cache[K, V]
+// 	type twoQueueBackend[K comparable, V any] = *tq.Cache[K, V]
+type twoQueueBackend[K comparable, V any] struct {
+	*tq.Cache[K, V]
 }

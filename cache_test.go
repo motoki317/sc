@@ -152,44 +152,44 @@ func TestNew(t *testing.T) {
 		assert.True(t, c.strictCoalescing)
 	})
 
-	t.Run("ARC needs capacity set", func(t *testing.T) {
+	t.Run("2Q needs capacity set", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := New[string, string](fn, 0, 0, WithARCBackend(0))
+		_, err := New[string, string](fn, 0, 0, With2QBackend(0))
 		assert.Error(t, err)
 	})
 
-	t.Run("ARC cache with invalid capacity", func(t *testing.T) {
+	t.Run("2Q cache with invalid capacity", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := New[string, string](fn, 0, 0, WithARCBackend(-1))
+		_, err := New[string, string](fn, 0, 0, With2QBackend(-1))
 		assert.Error(t, err)
 	})
 
-	t.Run("struct ARC needs capacity set", func(t *testing.T) {
+	t.Run("struct 2Q needs capacity set", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := New[string, string](fn, 0, 0, WithARCBackend(0), EnableStrictCoalescing())
+		_, err := New[string, string](fn, 0, 0, With2QBackend(0), EnableStrictCoalescing())
 		assert.Error(t, err)
 	})
 
-	t.Run("ARC cache", func(t *testing.T) {
+	t.Run("2Q cache", func(t *testing.T) {
 		t.Parallel()
 
-		c, err := New[string, string](fn, 0, 0, WithARCBackend(10))
+		c, err := New[string, string](fn, 0, 0, With2QBackend(10))
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, arcBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, twoQueueBackend[string, value[string]]{}, c.values)
 		assert.False(t, c.strictCoalescing)
 	})
 
-	t.Run("strict ARC cache", func(t *testing.T) {
+	t.Run("strict 2Q cache", func(t *testing.T) {
 		t.Parallel()
 
-		c, err := New[string, string](fn, 0, 0, WithARCBackend(10), EnableStrictCoalescing())
+		c, err := New[string, string](fn, 0, 0, With2QBackend(10), EnableStrictCoalescing())
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, arcBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, twoQueueBackend[string, value[string]]{}, c.values)
 		assert.True(t, c.strictCoalescing)
 	})
 }

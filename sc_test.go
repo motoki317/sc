@@ -18,7 +18,7 @@ var (
 	nonStrictCaches = []testCase{
 		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
 		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-		{name: "ARC cache", cacheOpts: []CacheOption{WithARCBackend(10)}},
+		{name: "2Q cache", cacheOpts: []CacheOption{With2QBackend(10)}},
 	}
 	strictCaches = lo.Map[testCase, testCase](nonStrictCaches, func(t testCase, _ int) testCase {
 		return testCase{

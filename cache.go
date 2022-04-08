@@ -8,7 +8,7 @@ import (
 
 	"github.com/motoki317/lru"
 
-	"github.com/motoki317/sc/arc"
+	"github.com/motoki317/sc/tq"
 )
 
 type replaceFunc[K comparable, V any] func(ctx context.Context, key K) (V, error)
@@ -44,11 +44,11 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 			return nil, errors.New("capacity needs to be greater than 0 for LRU cache")
 		}
 		b = lruBackend[K, value[V]]{lru.New[K, value[V]](lru.WithCapacity(config.capacity))}
-	case cacheBackendARC:
+	case cacheBackend2Q:
 		if config.capacity <= 0 {
-			return nil, errors.New("capacity needs to be greater than 0 for ARC cache")
+			return nil, errors.New("capacity needs to be greater than 0 for 2Q cache")
 		}
-		b = arcBackend[K, value[V]]{arc.New[K, value[V]](config.capacity)}
+		b = twoQueueBackend[K, value[V]]{tq.New[K, value[V]](config.capacity)}
 	default:
 		return nil, errors.New("unknown cache backend")
 	}

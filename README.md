@@ -54,11 +54,11 @@ This is ultra-lightweight, but does **not** evict items.
 You should only use the built-in map backend if your key's cardinality is finite,
 and you are comfortable holding **all** values in-memory.
 
-Otherwise, you should use LRU or ARC backend which automatically evicts overflown items.
+Otherwise, you should use LRU or 2Q backend which automatically evicts overflown items.
 
 - Built-in map (default)
 - LRU (Least Recently Used)
-- ARC (Adaptive Replacement Cache)
+- 2Q (Two Queue Cache)
 
 ## The design
 
