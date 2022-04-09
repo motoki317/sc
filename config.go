@@ -1,5 +1,7 @@
 package sc
 
+// CacheOption represents a single cache option.
+// See other package-level functions which return CacheOption for more details.
 type CacheOption func(c *cacheConfig)
 
 type cacheConfig struct {
@@ -64,7 +66,8 @@ func With2QBackend(capacity int) CacheOption {
 // the current one finishes or Cache.Forget is called.
 //
 // This is a generalization of so-called 'zero-time-cache', where the original zero-time-cache behavior is
-// achievable with zero freshFor/ttl values. cf: https://qiita.com/methane/items/27ccaee5b989fb5fca72
+// achievable with zero freshFor/ttl values.
+// see also: https://qiita.com/methane/items/27ccaee5b989fb5fca72 (ja)
 //
 // This is only useful if the freshFor/ttl value is very short (as in the range of a few hundred milliseconds) or
 // the request takes a very long time to finish, and you need fresh values for each response.
