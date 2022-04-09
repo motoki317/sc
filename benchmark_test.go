@@ -23,6 +23,7 @@ func BenchmarkCache_Single_SameKey(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				_, _ = cache.Get(ctx, "key")
 			}
+			b.Log(cache.Stats())
 		})
 	}
 }
@@ -51,6 +52,7 @@ func BenchmarkCache_Single_Zipfian(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				_, _ = cache.Get(ctx, keys[i%(size*10)])
 			}
+			b.Log(cache.Stats())
 		})
 	}
 }
@@ -73,6 +75,7 @@ func BenchmarkCache_Parallel_SameKey(b *testing.B) {
 					_, _ = cache.Get(ctx, "key")
 				}
 			})
+			b.Log(cache.Stats())
 		})
 	}
 }
@@ -102,6 +105,7 @@ func BenchmarkCache_Parallel_Zipfian(b *testing.B) {
 					_, _ = cache.Get(ctx, nextKey())
 				}
 			})
+			b.Log(cache.Stats())
 		})
 	}
 }
@@ -115,6 +119,7 @@ func BenchmarkCache_RealWorkLoad(b *testing.B) {
 		v    = 100
 	)
 
+	// Only benchmark against evicting caches (not the built-in map backend) because the map backend can cache all values.
 	for _, c := range evictingCaches {
 		c := c
 		b.Run(c.name, func(b *testing.B) {
@@ -134,6 +139,7 @@ func BenchmarkCache_RealWorkLoad(b *testing.B) {
 					_, _ = cache.Get(ctx, nextKey())
 				}
 			})
+			b.Log(cache.Stats())
 		})
 	}
 }

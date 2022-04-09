@@ -74,6 +74,7 @@ type Cache[K comparable, V any] struct {
 	fn               replaceFunc[K, V]
 	freshFor, ttl    time.Duration
 	strictCoalescing bool
+	stats            Stats
 }
 
 // Get retrieves an item from the cache.
@@ -125,6 +126,7 @@ func (c *Cache[K, V]) get(ctx context.Context, key K, needFresh bool) (V, error)
 retry:
 	// value exists and is fresh - just return
 	if ok && val.isFresh(t0, c.freshFor) {
+		c.stats.Hits++
 		c.mu.Unlock()
 		return val.v, nil
 	}
@@ -138,11 +140,13 @@ retry:
 			c.calls[key] = cl
 			go c.set(ctx, cl, key)
 		}
+		c.stats.GraceHits++
 		c.mu.Unlock()
 		return val.v, nil // serve stale contents
 	}
 
 	// value doesn't exist or is expired, or is stale, and we need it fresh - sync update
+	c.stats.Misses++
 	cl, ok := c.calls[key]
 	if ok {
 		c.mu.Unlock()
@@ -172,6 +176,7 @@ func (c *Cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
 	cl.val.v, cl.err = c.fn(ctx, key)
 
 	c.mu.Lock()
+	c.stats.Replacements++
 	if !cl.forgotten {
 		if cl.err == nil {
 			c.values.Set(key, cl.val)
