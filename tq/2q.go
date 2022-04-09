@@ -6,7 +6,7 @@ import (
 
 // Below includes modified code from https://github.com/hashicorp/golang-lru/blob/80c98217689d6df152309d574ccc682b21dc802c/2q.go.
 
-// Cache is a thread-safe fixed size 2Q cache.
+// Cache is a fixed size 2Q cache.
 // 2Q is an enhancement over the standard LRU cache
 // in that it tracks both frequently and recently used
 // entries separately. This avoids a burst in access to new
