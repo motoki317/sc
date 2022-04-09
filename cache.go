@@ -136,7 +136,7 @@ retry:
 			cl = &call[V]{}
 			cl.wg.Add(1)
 			c.calls[key] = cl
-			go c.set(ctx, cl, key, c.fn)
+			go c.set(ctx, cl, key)
 		}
 		c.mu.Unlock()
 		return val.v, nil // serve stale contents
@@ -162,14 +162,14 @@ retry:
 	c.calls[key] = cl
 	c.mu.Unlock()
 
-	c.set(ctx, cl, key, c.fn) // make sure not to hold lock while waiting for value
+	c.set(ctx, cl, key) // make sure not to hold lock while waiting for value
 	return cl.val.v, cl.err
 }
 
-func (c *Cache[K, V]) set(ctx context.Context, cl *call[V], key K, fn func(ctx context.Context, key K) (V, error)) {
+func (c *Cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
 	// Record time *just before* fn() is called - this maximizes the reuse of values
 	cl.val.t = time.Now()
-	cl.val.v, cl.err = fn(ctx, key)
+	cl.val.v, cl.err = c.fn(ctx, key)
 
 	c.mu.Lock()
 	if !cl.forgotten {
