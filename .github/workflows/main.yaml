@@ -64,10 +64,7 @@ jobs:
             ${{ runner.os }}-go-build-
       - name: Run tests
         run: |-
-          # Run race tests (excludes race_test.go)
-          go test ./... -race -shuffle=on
-          # Upload coverage file on non-race tests
-          go test ./... -coverprofile=coverage.txt -shuffle=on
+          go test ./... -race -coverprofile=coverage.txt -shuffle=on
       - name: Upload coverage data
         uses: codecov/codecov-action@v2
         with:
