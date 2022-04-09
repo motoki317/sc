@@ -5,10 +5,6 @@ import (
 	"errors"
 	"sync"
 	"time"
-
-	"github.com/motoki317/lru"
-
-	"github.com/motoki317/sc/tq"
 )
 
 type replaceFunc[K comparable, V any] func(ctx context.Context, key K) (V, error)
@@ -38,23 +34,24 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 		if config.capacity < 0 {
 			return nil, errors.New("capacity needs to be non-negative for map cache")
 		}
-		b = mapBackend[K, value[V]](make(map[K]value[V], config.capacity))
+		b = newMapBackend[K, value[V]](config.capacity)
 	case cacheBackendLRU:
 		if config.capacity <= 0 {
 			return nil, errors.New("capacity needs to be greater than 0 for LRU cache")
 		}
-		b = lruBackend[K, value[V]]{lru.New[K, value[V]](lru.WithCapacity(config.capacity))}
+		b = newLRUBackend[K, value[V]](config.capacity)
 	case cacheBackend2Q:
 		if config.capacity <= 0 {
 			return nil, errors.New("capacity needs to be greater than 0 for 2Q cache")
 		}
-		b = twoQueueBackend[K, value[V]]{tq.New[K, value[V]](config.capacity)}
+		b = new2QBackend[K, value[V]](config.capacity)
 	default:
 		return nil, errors.New("unknown cache backend")
 	}
 
 	return &Cache[K, V]{
 		values:           b,
+		cap:              config.capacity,
 		calls:            make(map[K]*call[V]),
 		fn:               replaceFn,
 		freshFor:         freshFor,
@@ -71,6 +68,7 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 // the cache replacement logic to Cache by simply calling Get or GetFresh.
 type Cache[K comparable, V any] struct {
 	values           backend[K, value[V]]
+	cap              int
 	calls            map[K]*call[V]
 	mu               sync.Mutex // mu protects values and calls
 	fn               replaceFunc[K, V]
@@ -102,6 +100,19 @@ func (c *Cache[K, V]) Forget(key K) {
 	}
 	delete(c.calls, key)
 	c.values.Delete(key)
+	c.mu.Unlock()
+}
+
+// Purge instructs the cache to delete all values, and Forget about all ongoing calls.
+// Note that frequently calling Purge will worsen the cache performance.
+// If you only need to Forget about a specific key, use Forget instead.
+func (c *Cache[K, V]) Purge() {
+	c.mu.Lock()
+	for _, cl := range c.calls {
+		cl.forgotten = true
+	}
+	c.calls = make(map[K]*call[V])
+	c.values = c.values.Purge(c.cap)
 	c.mu.Unlock()
 }
 

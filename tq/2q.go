@@ -133,3 +133,10 @@ func (c *Cache[K, V]) Delete(key K) {
 		return
 	}
 }
+
+// Purge removes all values from the cache.
+func (c *Cache[K, V]) Purge() {
+	c.frequent.Flush()
+	c.recent.Flush()
+	c.recentEvict.Flush()
+}

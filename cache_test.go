@@ -553,6 +553,114 @@ func TestCache_Forget_NoInterrupt(t *testing.T) {
 	}
 }
 
+func TestCache_Purge_Interrupt(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				atomic.AddInt64(&cnt, 1)
+				time.Sleep(750 * time.Millisecond)
+				return "result-" + key, nil
+			}
+			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			t0 := time.Now()
+			var wg sync.WaitGroup
+			// t=0ms, 1st call
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), "k1")
+				assert.NoError(t, err)
+				assert.Equal(t, "result-k1", v)
+			}()
+			go func() {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), "k2")
+				assert.NoError(t, err)
+				assert.Equal(t, "result-k2", v)
+			}()
+			time.Sleep(500 * time.Millisecond)
+			// t=500ms, Purge, then 2nd call
+			cache.Purge()
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), "k1")
+				assert.NoError(t, err)
+				assert.Equal(t, "result-k1", v)
+			}()
+			go func() {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), "k2")
+				assert.NoError(t, err)
+				assert.Equal(t, "result-k2", v)
+			}()
+			wg.Wait()
+			// t=1250ms, assert replaceFn was triggered twice
+			assert.EqualValues(t, 4, cnt)
+			assert.InDelta(t, 1250*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+		})
+	}
+}
+
+func TestCache_Purge_NoInterrupt(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				atomic.AddInt64(&cnt, 1)
+				return "result-" + key, nil
+			}
+			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			// 1st call group
+			v, err := cache.Get(context.Background(), "k1")
+			assert.NoError(t, err)
+			assert.Equal(t, "result-k1", v)
+			assert.EqualValues(t, cnt, 1)
+			v, err = cache.Get(context.Background(), "k2")
+			assert.NoError(t, err)
+			assert.Equal(t, "result-k2", v)
+			assert.EqualValues(t, cnt, 2)
+
+			// 2nd call group - values are reused
+			v, err = cache.Get(context.Background(), "k1")
+			assert.NoError(t, err)
+			assert.Equal(t, "result-k1", v)
+			assert.EqualValues(t, cnt, 2)
+			v, err = cache.Get(context.Background(), "k2")
+			assert.NoError(t, err)
+			assert.Equal(t, "result-k2", v)
+			assert.EqualValues(t, cnt, 2)
+
+			cache.Purge()
+
+			// 3rd call group - all values are forgotten
+			v, err = cache.Get(context.Background(), "k1")
+			assert.NoError(t, err)
+			assert.Equal(t, "result-k1", v)
+			assert.EqualValues(t, cnt, 3)
+			v, err = cache.Get(context.Background(), "k2")
+			assert.NoError(t, err)
+			assert.Equal(t, "result-k2", v)
+			assert.EqualValues(t, cnt, 4)
+		})
+	}
+}
+
 func TestCache_MultipleValues(t *testing.T) {
 	t.Parallel()
 
