@@ -13,7 +13,7 @@ func BenchmarkCache_Single_SameKey(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
 				return "value", nil
 			}
-			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			cache, err := New[string, string](replaceFn, 1*time.Minute, 1*time.Minute, c.cacheOpts...)
 			if err != nil {
 				b.Error(err)
 			}
@@ -41,7 +41,7 @@ func BenchmarkCache_Single_Zipfian(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
 				return "value", nil
 			}
-			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(size))...)
+			cache, err := New[string, string](replaceFn, 1*time.Minute, 1*time.Minute, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(size))...)
 			if err != nil {
 				b.Error(err)
 			}
@@ -64,7 +64,7 @@ func BenchmarkCache_Parallel_SameKey(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
 				return "value", nil
 			}
-			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			cache, err := New[string, string](replaceFn, 1*time.Minute, 1*time.Minute, c.cacheOpts...)
 			if err != nil {
 				b.Error(err)
 			}
@@ -93,7 +93,7 @@ func BenchmarkCache_Parallel_Zipfian(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
 				return "value", nil
 			}
-			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(size))...)
+			cache, err := New[string, string](replaceFn, 1*time.Minute, 1*time.Minute, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(size))...)
 			if err != nil {
 				b.Error(err)
 			}
