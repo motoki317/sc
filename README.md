@@ -36,11 +36,11 @@ For a more detailed guide, see [reference](https://pkg.go.dev/github.com/motoki3
 
 ## Notable Features
 
-- Simple to use: the only methods are `Get()`, `GetFresh()`, and `Forget()`.
-    - There is no `Set()` method - this is an intentional design choice to make the use easier.
+- Simple to use: wrap your function with `New()` and just call `Get()`.
+    - There is no `Set()` method. Calling `Get()` will automatically retrieve the value for you.
     - This prevents [cache stampede](https://en.wikipedia.org/wiki/Cache_stampede) problem idiomatically (see below).
 - Supports 1.18 generics - both key and value are generic.
-    - No `interface{}` or `any` used other than in the type parameter, even in internal implementations.
+    - No `interface{}` or `any` used other than in type parameters, even in internal implementations.
 - All methods are safe to be called from multiple goroutines.
 - Allows 'graceful cache replacement' (if `freshFor` < `ttl`) - a single goroutine is launched in the background to
   re-fetch a fresh value while serving stale value to readers.
@@ -64,11 +64,11 @@ Otherwise, you should use LRU or 2Q backend which automatically evicts overflown
 
 ### Why no Set() method? / Why cannot I dynamically provide load function to Get(), GetFresh() method?
 
-Short answer: sc is designed as a 'cache layer', not an overly complicated 'cache library'.
+Short answer: sc is designed as a foolproof 'cache layer', not an overly complicated 'cache library'.
 
 Long answer:
 
-sc is designed as a foolproof 'cache layer'.
+sc is designed as a simple, foolproof 'cache layer'.
 Users of sc simply wrap data-retrieving functions and retrieve values via the cache.
 By doing so, sc automatically reuses retrieved values and minimizes load on your data-store.
 
@@ -82,7 +82,7 @@ One could use `Get()` and `Set()` method to build the following logic:
 This is probably the most common use-case, and it is fine for most applications.
 But if you do not write it properly, the following problems may occur:
 
-- If the data flow is large, the cache stampede might occur.
+- If data flow is large, cache stampede might occur.
 - Accidentally using different keys for `Get()` and `Set()`.
 - Over-caching or under-caching by using inappropriate keys.
 
@@ -92,19 +92,19 @@ sc solves the problems mentioned above by acting as a 'cache layer'.
 - No manual `Set()` needed - no risk of accidentally using different keys.
 - Only the cache key is passed to the pre-provided replacement function - no risk of over-caching or under-caching.
 
-This is why sc does not have a `Set()` method, and forces to provide replacement function on setup.
+This is why sc does not have a `Set()` method, and forces you to provide replacement function on setup.
 In this way, there is no risk of cache stampede and possible bugs described above -
 sc will handle it for you.
 
 ### But I still want to manually `Set()` value on update!
 
 By the nature of the design, sc is a no-write-allocate type cache.
-You update the value on the backing data-store, and then call `Forget()` to clear the value on the cache.
+You update the value on the data-store, and then call `Forget()` to clear the value on the cache.
 sc will automatically load the value next time `Get()` is called.
 
-One could design another 'cache layer' library with `Set()` method which automatically calls the pre-provided
-update function which updates the backing data-store, then updates the value on the cache.
-But that would add whole another level of complexity - sc aims to be a simple foolproof cache layer.
+One could design another cache layer library with `Set()` method which automatically calls the pre-provided
+update function which updates the data-store, then updates the value on the cache.
+But that would add whole another level of complexity - sc aims to be a simple cache layer.
 
 ## Borrowed Ideas
 
