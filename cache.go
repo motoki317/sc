@@ -51,7 +51,6 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 
 	return &Cache[K, V]{
 		values:           b,
-		cap:              config.capacity,
 		calls:            make(map[K]*call[V]),
 		fn:               replaceFn,
 		freshFor:         freshFor,
@@ -68,7 +67,6 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 // the cache replacement logic to Cache by simply calling Get or GetFresh.
 type Cache[K comparable, V any] struct {
 	values           backend[K, value[V]]
-	cap              int
 	calls            map[K]*call[V]
 	mu               sync.Mutex // mu protects values and calls
 	fn               replaceFunc[K, V]
@@ -113,7 +111,7 @@ func (c *Cache[K, V]) Purge() {
 		cl.forgotten = true
 	}
 	c.calls = make(map[K]*call[V])
-	c.values = c.values.Purge(c.cap)
+	c.values.Purge()
 	c.mu.Unlock()
 }
 

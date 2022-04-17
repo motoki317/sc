@@ -16,9 +16,7 @@ type backend[K comparable, V any] interface {
 	// Delete the value for key.
 	Delete(key K)
 	// Purge all values.
-	// Callers must replace the instance by return value.
-	// Implementations may optionally create a new backend using the given cap, if it gives better performance.
-	Purge(cap int) backend[K, V]
+	Purge()
 }
 
 type mapBackend[K comparable, V any] map[K]V
@@ -40,15 +38,17 @@ func (m mapBackend[K, V]) Delete(key K) {
 	delete(m, key)
 }
 
-func (m mapBackend[K, V]) Purge(cap int) backend[K, V] {
-	return mapBackend[K, V](make(map[K]V, cap))
+func (m mapBackend[K, V]) Purge() {
+	// This form is optimized by the Go-compiler; it calls faster internal mapclear() instead of looping, and avoids
+	// allocating new memory.
+	// https://go.dev/doc/go1.11#performance
+	for key := range m {
+		delete(m, key)
+	}
 }
 
 type lruBackend[K comparable, V any] struct {
 	*lru.Cache[K, V]
-	// As of Go 1.18, Go does not allow type alias of generic types, so we cannot write it like below and have to fall back
-	// to embedding in a struct.
-	// 	type lruBackend[K comparable, V any] = *lru.Cache[K, V]
 }
 
 func newLRUBackend[K comparable, V any](cap int) backend[K, V] {
@@ -59,21 +59,17 @@ func (l lruBackend[K, V]) Delete(key K) {
 	l.Cache.Delete(key) // Function signature differs a bit
 }
 
-func (l lruBackend[K, V]) Purge(_ int) backend[K, V] {
+func (l lruBackend[K, V]) Purge() {
 	l.Cache.Flush()
-	return l
 }
 
 type twoQueueBackend[K comparable, V any] struct {
 	*tq.Cache[K, V]
-	// Same as lruBackend - cannot use type alias.
+	// As of Go 1.18, Go does not allow type alias of generic types, so we cannot write it like below and have to fall back
+	// to embedding in a struct.
+	// 	type twoQueueBackend[K comparable, V any] = *tq.Cache[K, V]
 }
 
 func new2QBackend[K comparable, V any](cap int) backend[K, V] {
 	return twoQueueBackend[K, V]{tq.New[K, V](cap)}
-}
-
-func (c twoQueueBackend[K, V]) Purge(_ int) backend[K, V] {
-	c.Cache.Purge()
-	return c
 }
