@@ -106,7 +106,8 @@ One could design another cache layer library with `Set()` method which automatic
 update function which updates the data-store, then updates the value on the cache.
 But that would add whole another level of complexity - sc aims to be a simple cache layer.
 
-## Borrowed Ideas
+## Inspirations from
 
 - [go-chi/stampede: Function and HTTP request coalescer](https://github.com/go-chi/stampede)
 - [singleflight package - golang.org/x/sync/singleflight - pkg.go.dev](https://pkg.go.dev/golang.org/x/sync/singleflight)
+- [methane/zerotimecache](https://github.com/methane/zerotimecache)
