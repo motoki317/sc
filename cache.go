@@ -79,7 +79,7 @@ type Cache[K comparable, V any] struct {
 // Returns the found value and a nil error if found.
 // May return a stale item (older than freshFor, but younger than ttl) while a single goroutine is launched
 // in the background to update the cache.
-// Returns a zero-value and a non-nil error if replaceFn returns an error.
+// Returns an error as it is if replaceFn returns an error.
 func (c *Cache[K, V]) Get(ctx context.Context, key K) (V, error) {
 	return c.get(ctx, key, false)
 }
