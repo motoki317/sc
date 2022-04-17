@@ -63,13 +63,6 @@ func (l lruBackend[K, V]) Purge() {
 	l.Cache.Flush()
 }
 
-type twoQueueBackend[K comparable, V any] struct {
-	*tq.Cache[K, V]
-	// As of Go 1.18, Go does not allow type alias of generic types, so we cannot write it like below and have to fall back
-	// to embedding in a struct.
-	// 	type twoQueueBackend[K comparable, V any] = *tq.Cache[K, V]
-}
-
 func new2QBackend[K comparable, V any](cap int) backend[K, V] {
-	return twoQueueBackend[K, V]{tq.New[K, V](cap)}
+	return tq.New[K, V](cap)
 }
