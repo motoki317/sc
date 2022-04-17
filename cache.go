@@ -9,6 +9,15 @@ import (
 
 type replaceFunc[K comparable, V any] func(ctx context.Context, key K) (V, error)
 
+// NewMust is similar to New, but panics on error.
+func NewMust[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Duration, options ...CacheOption) *Cache[K, V] {
+	c, err := New(replaceFn, freshFor, ttl, options...)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 // New creates a new cache instance.
 // You can specify ttl longer than freshFor to achieve 'graceful cache replacement', where stale item is served via Get
 // while a single goroutine is launched in the background to retrieve a fresh item.

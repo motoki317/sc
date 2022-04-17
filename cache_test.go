@@ -12,7 +12,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNew tests the behavior of New.
+func TestNewMust(t *testing.T) {
+	t.Parallel()
+
+	fn := func(ctx context.Context, s string) (string, error) { return "", nil }
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		_ = NewMust(fn, 0, 0)
+	})
+	t.Run("fail", func(t *testing.T) {
+		t.Parallel()
+
+		func() {
+			defer func() {
+				err := recover()
+				assert.NotNil(t, err)
+			}()
+
+			_ = NewMust(fn, -1, -1)
+		}()
+	})
+}
+
 func TestNew(t *testing.T) {
 	t.Parallel()
 
