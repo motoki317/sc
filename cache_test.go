@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNew tests the behavior of New.
 func TestNew(t *testing.T) {
 	t.Parallel()
 
@@ -194,108 +195,7 @@ func TestNew(t *testing.T) {
 	})
 }
 
-func TestCache_GetRandom(t *testing.T) {
-	t.Parallel()
-
-	for _, c := range allCaches {
-		c := c
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-
-			replaceFn := func(ctx context.Context, key string) (string, error) {
-				return "result-" + key, nil
-			}
-			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
-			assert.NoError(t, err)
-
-			keys := newKeys(newZipfian(1.001, 50, 100), 1000)
-			for _, key := range keys {
-				val, err := cache.Get(context.Background(), key)
-				assert.NoError(t, err)
-				assert.Equal(t, "result-"+key, val)
-			}
-		})
-	}
-}
-
-func TestCache_GetRandom_Parallel(t *testing.T) {
-	t.Parallel()
-
-	const (
-		concurrency = 25
-		cacheSize   = 100
-		s           = 1.01
-		v           = 10
-	)
-	for _, c := range allCaches {
-		c := c
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-
-			replaceFn := func(ctx context.Context, key string) (string, error) {
-				time.Sleep(1 * time.Millisecond) // sleep for some time to simulate concurrent access
-				return "result-" + key, nil
-			}
-			cache, err := New[string, string](replaceFn, 10*time.Millisecond, 10*time.Millisecond, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(cacheSize))...)
-			assert.NoError(t, err)
-
-			var wg sync.WaitGroup
-			for i := 0; i < concurrency; i++ {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					keys := newKeys(newZipfian(s, v, cacheSize*2), cacheSize*10)
-					for _, key := range keys {
-						val, err := cache.Get(context.Background(), key)
-						assert.NoError(t, err)
-						assert.Equal(t, "result-"+key, val)
-					}
-				}()
-			}
-			wg.Wait()
-		})
-	}
-}
-
-func TestCache_GetRandom_Parallel_GracefulReplacement(t *testing.T) {
-	t.Parallel()
-
-	const (
-		concurrency = 25
-		cacheSize   = 100
-		s           = 1.01
-		v           = 10
-	)
-	for _, c := range allCaches {
-		c := c
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-
-			replaceFn := func(ctx context.Context, key string) (string, error) {
-				time.Sleep(1 * time.Millisecond) // sleep for some time to simulate concurrent access
-				return "result-" + key, nil
-			}
-			cache, err := New[string, string](replaceFn, 10*time.Millisecond, 20*time.Millisecond, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(cacheSize))...)
-			assert.NoError(t, err)
-
-			var wg sync.WaitGroup
-			for i := 0; i < concurrency; i++ {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					keys := newKeys(newZipfian(s, v, cacheSize*2), cacheSize*10)
-					for _, key := range keys {
-						val, err := cache.Get(context.Background(), key)
-						assert.NoError(t, err)
-						assert.Equal(t, "result-"+key, val)
-					}
-				}()
-			}
-			wg.Wait()
-		})
-	}
-}
-
+// TestCache_Get calls Cache.Get multiple times and ensures a value is reused.
 func TestCache_Get(t *testing.T) {
 	t.Parallel()
 
@@ -341,7 +241,64 @@ func TestCache_Get(t *testing.T) {
 	}
 }
 
-func TestCache_GetError(t *testing.T) {
+// TestCache_Get_Async ensures that Cache.Get will trigger background fetch if a stale value is found.
+func TestCache_Get_Async(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				assert.Equal(t, "k1", key)
+				atomic.AddInt64(&cnt, 1)
+				time.Sleep(500 * time.Millisecond)
+				return "result1", nil
+			}
+			cache, err := New[string, string](replaceFn, 250*time.Millisecond, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			t0 := time.Now()
+			// t=0ms, 1st call group
+			var wg sync.WaitGroup
+			for i := 0; i < 10; i++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					val, err := cache.Get(context.Background(), "k1")
+					assert.NoError(t, err)
+					assert.Equal(t, "result1", val)
+				}()
+			}
+			wg.Wait()
+			assert.EqualValues(t, 1, atomic.LoadInt64(&cnt))
+			// assert t=500ms
+			assert.InDelta(t, 500*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+
+			// t=500ms, 2nd call group -> returns stale values, one goroutine is launched in the background to trigger replaceFn
+			for i := 0; i < 10; i++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					val, err := cache.Get(context.Background(), "k1")
+					assert.NoError(t, err)
+					assert.Equal(t, "result1", val)
+				}()
+			}
+			wg.Wait()
+			// assert t=500ms
+			assert.InDelta(t, 500*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+			// Sleep for some time to make sure the background goroutine triggers replaceFn
+			time.Sleep(250 * time.Millisecond)
+			assert.EqualValues(t, 2, atomic.LoadInt64(&cnt))
+		})
+	}
+}
+
+// TestCache_Get_Error ensures Cache.Get returns an error if replaceFn returns an error.
+func TestCache_Get_Error(t *testing.T) {
 	t.Parallel()
 
 	for _, c := range allCaches {
@@ -365,6 +322,7 @@ func TestCache_GetError(t *testing.T) {
 	}
 }
 
+// TestCache_GetFresh calls Cache.GetFresh multiple times and ensures a value is reused.
 func TestCache_GetFresh(t *testing.T) {
 	t.Parallel()
 
@@ -408,6 +366,7 @@ func TestCache_GetFresh(t *testing.T) {
 	}
 }
 
+// TestCache_GetFresh_Sync ensures that graceful cache replacement is disabled in Cache.GetFresh.
 func TestCache_GetFresh_Sync(t *testing.T) {
 	t.Parallel()
 
@@ -461,6 +420,7 @@ func TestCache_GetFresh_Sync(t *testing.T) {
 	}
 }
 
+// TestCache_Forget_Interrupt ensures that calling Cache.Forget will make later get calls to trigger replaceFn.
 func TestCache_Forget_Interrupt(t *testing.T) {
 	t.Parallel()
 
@@ -507,6 +467,7 @@ func TestCache_Forget_Interrupt(t *testing.T) {
 	}
 }
 
+// TestCache_Forget_NoInterrupt is similar to TestCache_Forget_Interrupt, but there are no ongoing calls of replaceFn.
 func TestCache_Forget_NoInterrupt(t *testing.T) {
 	t.Parallel()
 
@@ -553,6 +514,7 @@ func TestCache_Forget_NoInterrupt(t *testing.T) {
 	}
 }
 
+// TestCache_Purge_Interrupt ensures that calling Cache.Purge will make all later get calls to trigger replaceFn.
 func TestCache_Purge_Interrupt(t *testing.T) {
 	t.Parallel()
 
@@ -603,13 +565,14 @@ func TestCache_Purge_Interrupt(t *testing.T) {
 				assert.Equal(t, "result-k2", v)
 			}()
 			wg.Wait()
-			// t=1250ms, assert replaceFn was triggered twice
+			// t=1250ms, assert replaceFn was triggered 4 times
 			assert.EqualValues(t, 4, cnt)
 			assert.InDelta(t, 1250*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
 		})
 	}
 }
 
+// TestCache_Purge_NoInterrupt is similar to TestCache_Purge_Interrupt, but there are no ongoing calls of replaceFn.
 func TestCache_Purge_NoInterrupt(t *testing.T) {
 	t.Parallel()
 
@@ -661,6 +624,49 @@ func TestCache_Purge_NoInterrupt(t *testing.T) {
 	}
 }
 
+// TestCache_ParallelReplacement ensures parallel call to replaceFn per key, not per cache instance.
+func TestCache_ParallelReplacement(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				atomic.AddInt64(&cnt, 1)
+				time.Sleep(500 * time.Millisecond)
+				return "result-" + key, nil
+			}
+			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			t0 := time.Now()
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), "k1")
+				assert.NoError(t, err)
+				assert.Equal(t, "result-k1", v)
+			}()
+			go func() {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), "k2")
+				assert.NoError(t, err)
+				assert.Equal(t, "result-k2", v)
+			}()
+			wg.Wait()
+			// t=500ms, assert replaceFn was triggered twice
+			assert.EqualValues(t, 2, cnt)
+			// assert t=500ms
+			assert.InDelta(t, 500*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+		})
+	}
+}
+
+// TestCache_MultipleValues calls Cache.Get with some different keys, and ensures correct values are returned.
 func TestCache_MultipleValues(t *testing.T) {
 	t.Parallel()
 
@@ -722,61 +728,8 @@ func TestCache_MultipleValues(t *testing.T) {
 	}
 }
 
-func TestCache_BackGroundFetch(t *testing.T) {
-	t.Parallel()
-
-	for _, c := range allCaches {
-		c := c
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-
-			var cnt int64
-			replaceFn := func(ctx context.Context, key string) (string, error) {
-				assert.Equal(t, "k1", key)
-				atomic.AddInt64(&cnt, 1)
-				time.Sleep(500 * time.Millisecond)
-				return "result1", nil
-			}
-			cache, err := New[string, string](replaceFn, 250*time.Millisecond, 1*time.Second, c.cacheOpts...)
-			assert.NoError(t, err)
-
-			t0 := time.Now()
-			// t=0ms, 1st call group
-			var wg sync.WaitGroup
-			for i := 0; i < 10; i++ {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					val, err := cache.Get(context.Background(), "k1")
-					assert.NoError(t, err)
-					assert.Equal(t, "result1", val)
-				}()
-			}
-			wg.Wait()
-			assert.EqualValues(t, 1, atomic.LoadInt64(&cnt))
-			// assert t=500ms
-			assert.InDelta(t, 500*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
-
-			// t=500ms, 2nd call group -> returns stale values, one goroutine is launched in the background to trigger replaceFn
-			for i := 0; i < 10; i++ {
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					val, err := cache.Get(context.Background(), "k1")
-					assert.NoError(t, err)
-					assert.Equal(t, "result1", val)
-				}()
-			}
-			wg.Wait()
-			// assert t=500ms
-			assert.InDelta(t, 500*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
-			// Sleep for some time to make sure the background goroutine triggers replaceFn
-			time.Sleep(250 * time.Millisecond)
-			assert.EqualValues(t, 2, atomic.LoadInt64(&cnt))
-		})
-	}
-}
-
+// TestCache_NoStrictCoalescing tests "no strict coalescing" behavior, which is similar to singleflight.
+// "No strict coalescing" cache may return expired values.
 func TestCache_NoStrictCoalescing(t *testing.T) {
 	t.Parallel()
 
@@ -863,6 +816,7 @@ func TestCache_NoStrictCoalescing(t *testing.T) {
 	}
 }
 
+// TestCache_StrictCoalescing ensures "strict coalescing" cache will never return expired items.
 func TestCache_StrictCoalescing(t *testing.T) {
 	t.Parallel()
 
@@ -946,6 +900,7 @@ func TestCache_StrictCoalescing(t *testing.T) {
 	}
 }
 
+// TestCache_ZeroTimeCache ensures "strict coalescing" cache will never return expired items, even with zero freshFor/ttl values.
 func TestCache_ZeroTimeCache(t *testing.T) {
 	t.Parallel()
 
