@@ -145,7 +145,7 @@ retry:
 			cl = &call[V]{}
 			cl.wg.Add(1)
 			c.calls[key] = cl
-			go c.set(ctx, cl, key)
+			go c.set(context.Background(), cl, key) // Use empty context so as not to be cancelled by the original context
 		}
 		c.stats.GraceHits++
 		c.mu.Unlock()
