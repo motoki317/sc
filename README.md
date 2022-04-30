@@ -62,7 +62,7 @@ Otherwise, you should use LRU or 2Q backend which automatically evicts overflown
 
 ## The design
 
-### Why no Set() method? / Why cannot I dynamically provide load function to Get(), GetFresh() method?
+### Why no Set() method? / Why cannot I dynamically provide load function to Get() method?
 
 Short answer: sc is designed as a foolproof 'cache layer', not an overly complicated 'cache library'.
 

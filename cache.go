@@ -73,7 +73,7 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 // All cache implementations prevent the 'cache stampede' problem by coalescing multiple requests to the same key.
 //
 // Notice that Cache doesn't have Set(key K, value V) method - this is intentional. Users are expected to delegate
-// the cache replacement logic to Cache by simply calling Get or GetFresh.
+// the cache replacement logic to Cache by simply calling Get.
 type Cache[K comparable, V any] struct {
 	values           backend[K, value[V]]
 	calls            map[K]*call[V]
@@ -90,42 +90,7 @@ type Cache[K comparable, V any] struct {
 // in the background to update the cache.
 // Returns an error as it is if replaceFn returns an error.
 func (c *Cache[K, V]) Get(ctx context.Context, key K) (V, error) {
-	return c.get(ctx, key, false)
-}
-
-// GetFresh is similar to Get, but if a stale item is found, it waits to retrieve a fresh item instead.
-func (c *Cache[K, V]) GetFresh(ctx context.Context, key K) (V, error) {
-	return c.get(ctx, key, true)
-}
-
-// Forget instructs the cache to forget about the key.
-// Corresponding item will be deleted, ongoing cache replacement results (if any) will not be added to the cache,
-// and any future Get and GetFresh calls will immediately retrieve a new item.
-func (c *Cache[K, V]) Forget(key K) {
-	c.mu.Lock()
-	if ca, ok := c.calls[key]; ok {
-		ca.forgotten = true
-	}
-	delete(c.calls, key)
-	c.values.Delete(key)
-	c.mu.Unlock()
-}
-
-// Purge instructs the cache to delete all values, and Forget about all ongoing calls.
-// Note that frequently calling Purge will worsen the cache performance.
-// If you only need to Forget about a specific key, use Forget instead.
-func (c *Cache[K, V]) Purge() {
-	c.mu.Lock()
-	for _, cl := range c.calls {
-		cl.forgotten = true
-	}
-	c.calls = make(map[K]*call[V])
-	c.values.Purge()
-	c.mu.Unlock()
-}
-
-func (c *Cache[K, V]) get(ctx context.Context, key K, needFresh bool) (V, error) {
-	// Record time as soon as Get or GetFresh is called *before acquiring the lock* - this maximizes the reuse of values
+	// Record time as soon as Get is called *before acquiring the lock* - this maximizes the reuse of values
 	t0 := time.Now()
 	c.mu.Lock()
 	val, ok := c.values.Get(key)
@@ -138,8 +103,8 @@ retry:
 		return val.v, nil
 	}
 
-	// value exists and is stale, and we're OK with serving it stale while updating in the background
-	if ok && !needFresh && !val.isExpired(t0, c.ttl) {
+	// value exists and is stale - serve it stale while updating in the background
+	if ok && !val.isExpired(t0, c.ttl) {
 		cl, ok := c.calls[key]
 		if !ok {
 			cl = &call[V]{}
@@ -149,7 +114,7 @@ retry:
 		}
 		c.stats.GraceHits++
 		c.mu.Unlock()
-		return val.v, nil // serve stale contents
+		return val.v, nil
 	}
 
 	// value doesn't exist or is expired, or is stale, and we need it fresh - sync update
@@ -175,6 +140,32 @@ retry:
 
 	c.set(ctx, cl, key) // make sure not to hold lock while waiting for value
 	return cl.val.v, cl.err
+}
+
+// Forget instructs the cache to forget about the key.
+// Corresponding item will be deleted, ongoing cache replacement results (if any) will not be added to the cache,
+// and any future Get calls will immediately retrieve a new item.
+func (c *Cache[K, V]) Forget(key K) {
+	c.mu.Lock()
+	if ca, ok := c.calls[key]; ok {
+		ca.forgotten = true
+	}
+	delete(c.calls, key)
+	c.values.Delete(key)
+	c.mu.Unlock()
+}
+
+// Purge instructs the cache to delete all values, and Forget about all ongoing calls.
+// Note that frequently calling Purge will worsen the cache performance.
+// If you only need to Forget about a specific key, use Forget instead.
+func (c *Cache[K, V]) Purge() {
+	c.mu.Lock()
+	for _, cl := range c.calls {
+		cl.forgotten = true
+	}
+	c.calls = make(map[K]*call[V])
+	c.values.Purge()
+	c.mu.Unlock()
 }
 
 func (c *Cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
