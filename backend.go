@@ -1,8 +1,7 @@
 package sc
 
 import (
-	"github.com/motoki317/lru"
-
+	"github.com/motoki317/sc/lru"
 	"github.com/motoki317/sc/tq"
 )
 
