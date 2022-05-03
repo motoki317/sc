@@ -84,7 +84,7 @@ func EnableStrictCoalescing() CacheOption {
 // Note that by default, a cache will be initialized without a cleaner.
 // Try tuning your cache size (and using non-map backend) before using this option.
 // Using cleanup interval on a cache with many items may decrease the through-put,
-// since the cleaner has to take a lock to iterate through all items.
+// since the cleaner has to acquire the lock to iterate through all items.
 func WithCleanupInterval(interval time.Duration) CacheOption {
 	return func(c *cacheConfig) {
 		c.cleanupInterval = interval
