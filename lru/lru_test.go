@@ -36,7 +36,7 @@ func TestCapacity(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestCache_Get(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		lru := lru.New[int, int]()
 
@@ -56,7 +56,7 @@ func TestGet(t *testing.T) {
 	})
 }
 
-func TestPeek(t *testing.T) {
+func TestCache_Peek(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		lru := lru.New[int, int]()
 
@@ -75,7 +75,7 @@ func TestPeek(t *testing.T) {
 	})
 }
 
-func TestSet(t *testing.T) {
+func TestCache_Set(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		lru := lru.New[int, int]()
 
@@ -97,7 +97,7 @@ func TestSet(t *testing.T) {
 	})
 }
 
-func TestDelete(t *testing.T) {
+func TestCache_Delete(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		lru := lru.New[int, int]()
 
@@ -118,7 +118,30 @@ func TestDelete(t *testing.T) {
 	})
 }
 
-func TestDeleteOldest(t *testing.T) {
+func TestCache_DeleteIf(t *testing.T) {
+	lru := lru.New[int, int]()
+
+	lru.Set(1, 10)
+	lru.Set(2, 10)
+	lru.Set(3, 10)
+	lru.Set(4, 10)
+
+	lru.DeleteIf(func(key int, value int) bool {
+		return key%2 == 0
+	})
+
+	require.Equal(t, 2, lru.Len())
+	_, ok := lru.Peek(1)
+	require.True(t, ok)
+	_, ok = lru.Peek(2)
+	require.False(t, ok)
+	_, ok = lru.Peek(3)
+	require.True(t, ok)
+	_, ok = lru.Peek(4)
+	require.False(t, ok)
+}
+
+func TestCache_DeleteOldest(t *testing.T) {
 	t.Run("missing", func(t *testing.T) {
 		lru := lru.New[int, int]()
 
@@ -145,7 +168,7 @@ func TestDeleteOldest(t *testing.T) {
 	})
 }
 
-func TestFlush(t *testing.T) {
+func TestCache_Flush(t *testing.T) {
 	lru := lru.New[int, int]()
 
 	key, value := 1, 100

@@ -50,7 +50,7 @@ func strictCaches(cap int) []testCase {
 	return Map(nonStrictCaches(cap), func(t testCase, _ int) testCase {
 		return testCase{
 			name:      "strict " + t.name,
-			cacheOpts: append(append([]CacheOption{}, t.cacheOpts...), EnableStrictCoalescing()),
+			cacheOpts: append(t.cacheOpts, EnableStrictCoalescing()),
 		}
 	})
 }

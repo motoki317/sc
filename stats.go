@@ -40,7 +40,7 @@ func (s Stats) HitRatio() float64 {
 
 // Stats returns cache metrics.
 // It is useful for monitoring performance and tuning your cache size/type.
-func (c *Cache[K, V]) Stats() Stats {
+func (c *cache[K, V]) Stats() Stats {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.stats

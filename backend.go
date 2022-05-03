@@ -14,6 +14,8 @@ type backend[K comparable, V any] interface {
 	Set(key K, v V)
 	// Delete the value for key.
 	Delete(key K)
+	// DeleteIf deletes all values that match the predicate.
+	DeleteIf(predicate func(key K, value V) bool)
 	// Purge all values.
 	Purge()
 }
@@ -35,6 +37,14 @@ func (m mapBackend[K, V]) Set(key K, v V) {
 
 func (m mapBackend[K, V]) Delete(key K) {
 	delete(m, key)
+}
+
+func (m mapBackend[K, V]) DeleteIf(predicate func(key K, value V) bool) {
+	for k, v := range m {
+		if predicate(k, v) {
+			delete(m, k)
+		}
+	}
 }
 
 func (m mapBackend[K, V]) Purge() {

@@ -3,6 +3,7 @@ package sc
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -907,6 +908,67 @@ func TestCache_ZeroTimeCache(t *testing.T) {
 			assert.EqualValues(t, 3, atomic.LoadInt64(&cnt))
 			// assert t=3250ms
 			assert.InDelta(t, 3250*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+		})
+	}
+}
+
+// TestCleaningCache tests caches with cleaner option, which will clean up expired items on a regular interval.
+func TestCleaningCache(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches(10) {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				atomic.AddInt64(&cnt, 1)
+				return "value-" + key, nil
+			}
+			cache, err := New(replaceFn, 700*time.Millisecond, 1000*time.Millisecond, append(c.cacheOpts, WithCleanupInterval(300*time.Millisecond))...)
+			assert.NoError(t, err)
+
+			// t=0ms, cache the value
+			v, err := cache.Get(context.Background(), "k1")
+			assert.NoError(t, err)
+			assert.Equal(t, "value-k1", v)
+			assert.EqualValues(t, 1, atomic.LoadInt64(&cnt))
+
+			time.Sleep(400 * time.Millisecond)
+			// t=400ms, value is still cached and fresh
+			v, err = cache.Get(context.Background(), "k1")
+			assert.NoError(t, err)
+			assert.Equal(t, "value-k1", v)
+			assert.EqualValues(t, 1, atomic.LoadInt64(&cnt))
+
+			time.Sleep(1 * time.Second)
+			// t=1400ms, expired value is automatically removed from the cache, freeing memory
+			// although, this has no effect if viewed from the public interface of Cache
+			v, err = cache.Get(context.Background(), "k1")
+			assert.NoError(t, err)
+			assert.Equal(t, "value-k1", v)
+			assert.EqualValues(t, 2, atomic.LoadInt64(&cnt))
+		})
+	}
+}
+
+// TestCleaningCacheFinalizer tests that cache finalizers to stop cleaner is working.
+// Since there's not really a good way of ensuring call to the finalizer, this just increases the test coverage.
+func TestCleaningCacheFinalizer(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches(10) {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			replaceFn := func(_ context.Context, _ struct{}) (string, error) { return "", nil }
+			c, err := New(replaceFn, time.Hour, time.Hour, append(c.cacheOpts, WithCleanupInterval(time.Second))...)
+			assert.NoError(t, err)
+
+			_, _ = c.Get(context.Background(), struct{}{})
+			runtime.GC() // finalizer is called and cleaner is stopped
 		})
 	}
 }

@@ -3,6 +3,7 @@ package sc
 import (
 	"context"
 	"errors"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -58,14 +59,55 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 		return nil, errors.New("unknown cache backend")
 	}
 
-	return &Cache[K, V]{
-		values:           b,
-		calls:            make(map[K]*call[V]),
-		fn:               replaceFn,
-		freshFor:         freshFor,
-		ttl:              ttl,
-		strictCoalescing: config.enableStrictCoalescing,
-	}, nil
+	c := &Cache[K, V]{
+		cache: &cache[K, V]{
+			values:           b,
+			calls:            make(map[K]*call[V]),
+			fn:               replaceFn,
+			freshFor:         freshFor,
+			ttl:              ttl,
+			strictCoalescing: config.enableStrictCoalescing,
+		},
+	}
+
+	if config.cleanupInterval > 0 {
+		closer := make(chan struct{})
+		c.cl = newCleaner(c.cache, config.cleanupInterval, closer)
+		runtime.SetFinalizer(c, stopCleaner[K, V])
+	}
+
+	return c, nil
+}
+
+type cleaner[K comparable, V any] struct {
+	ticker *time.Ticker
+	closer chan struct{}
+	c      *cache[K, V]
+}
+
+func newCleaner[K comparable, V any](c *cache[K, V], interval time.Duration, closer chan struct{}) *cleaner[K, V] {
+	cl := &cleaner[K, V]{
+		ticker: time.NewTicker(interval),
+		closer: closer,
+		c:      c,
+	}
+	go cl.run()
+	return cl
+}
+
+func (c *cleaner[K, V]) run() {
+	for {
+		select {
+		case <-c.ticker.C:
+			c.c.cleanup()
+		case <-c.closer:
+			return
+		}
+	}
+}
+
+func stopCleaner[K comparable, V any](c *Cache[K, V]) {
+	c.cl.closer <- struct{}{}
 }
 
 // Cache represents a single cache instance.
@@ -75,6 +117,14 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 // Notice that Cache doesn't have Set(key K, value V) method - this is intentional. Users are expected to delegate
 // the cache replacement logic to Cache by simply calling Get.
 type Cache[K comparable, V any] struct {
+	*cache[K, V]
+	cl *cleaner[K, V]
+}
+
+// cache is the actual cache instance.
+// See https://github.com/patrickmn/go-cache/blob/46f407853014144407b6c2ec7ccc76bf67958d93/cache.go#L1115
+// for the reason Cache and cache is separate.
+type cache[K comparable, V any] struct {
 	values           backend[K, value[V]]
 	calls            map[K]*call[V]
 	mu               sync.Mutex // mu protects values and calls
@@ -89,7 +139,7 @@ type Cache[K comparable, V any] struct {
 // May return a stale item (older than freshFor, but younger than ttl) while a single goroutine is launched
 // in the background to update the cache.
 // Returns an error as it is if replaceFn returns an error.
-func (c *Cache[K, V]) Get(ctx context.Context, key K) (V, error) {
+func (c *cache[K, V]) Get(ctx context.Context, key K) (V, error) {
 	// Record time as soon as Get is called *before acquiring the lock* - this maximizes the reuse of values
 	t0 := time.Now()
 	c.mu.Lock()
@@ -145,7 +195,7 @@ retry:
 // Forget instructs the cache to forget about the key.
 // Corresponding item will be deleted, ongoing cache replacement results (if any) will not be added to the cache,
 // and any future Get calls will immediately retrieve a new item.
-func (c *Cache[K, V]) Forget(key K) {
+func (c *cache[K, V]) Forget(key K) {
 	c.mu.Lock()
 	if ca, ok := c.calls[key]; ok {
 		ca.forgotten = true
@@ -158,7 +208,7 @@ func (c *Cache[K, V]) Forget(key K) {
 // Purge instructs the cache to delete all values, and Forget about all ongoing calls.
 // Note that frequently calling Purge will worsen the cache performance.
 // If you only need to Forget about a specific key, use Forget instead.
-func (c *Cache[K, V]) Purge() {
+func (c *cache[K, V]) Purge() {
 	c.mu.Lock()
 	for _, cl := range c.calls {
 		cl.forgotten = true
@@ -168,7 +218,7 @@ func (c *Cache[K, V]) Purge() {
 	c.mu.Unlock()
 }
 
-func (c *Cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
+func (c *cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
 	// Record time *just before* fn() is called - this maximizes the reuse of values
 	cl.val.t = time.Now()
 	cl.val.v, cl.err = c.fn(ctx, key)
@@ -183,4 +233,14 @@ func (c *Cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
 	}
 	c.mu.Unlock()
 	cl.wg.Done()
+}
+
+// cleanup cleans up expired items from the cache, freeing memory.
+func (c *cache[K, V]) cleanup() {
+	c.mu.Lock()
+	now := time.Now() // Record time after acquiring the lock to maximize freeing of expired items
+	c.values.DeleteIf(func(key K, value value[V]) bool {
+		return value.isExpired(now, c.ttl)
+	})
+	c.mu.Unlock()
 }

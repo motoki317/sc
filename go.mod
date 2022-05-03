@@ -2,10 +2,7 @@ module github.com/motoki317/sc
 
 go 1.18
 
-require (
-	github.com/motoki317/lru v0.0.3
-	github.com/stretchr/testify v1.7.1
-)
+require github.com/stretchr/testify v1.7.1
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

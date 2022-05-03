@@ -1,7 +1,7 @@
 package tq
 
 import (
-	"github.com/motoki317/lru"
+	"github.com/motoki317/sc/lru"
 )
 
 // Cache is a fixed size 2Q cache.
@@ -117,6 +117,13 @@ func (c *Cache[K, V]) ensureSpace(recentEvict bool) {
 
 	// Remove from the frequent list otherwise
 	c.frequent.DeleteOldest()
+}
+
+// DeleteIf deletes all elements that match the predicate.
+func (c *Cache[K, V]) DeleteIf(predicate func(key K, value V) bool) {
+	c.frequent.DeleteIf(predicate)
+	c.recent.DeleteIf(predicate)
+	// does not add to recentEvict, but that is okay for sc's use-case
 }
 
 // Delete removes the provided key from the cache.

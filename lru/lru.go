@@ -93,6 +93,15 @@ func (c *Cache[K, V]) Delete(key K) bool {
 	return true
 }
 
+// DeleteIf deletes all elements that match the predicate.
+func (c *Cache[K, V]) DeleteIf(predicate func(key K, value V) bool) {
+	for k, v := range c.items {
+		if predicate(k, v.Value.value) {
+			c.deleteElement(v)
+		}
+	}
+}
+
 // DeleteOldest deletes the oldest item from the cache.
 func (c *Cache[K, V]) DeleteOldest() (key K, value V, ok bool) {
 	if e := c.ll.Back(); e != nil {

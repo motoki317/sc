@@ -1,5 +1,9 @@
 package sc
 
+import (
+	"time"
+)
+
 // CacheOption represents a single cache option.
 // See other package-level functions which return CacheOption for more details.
 type CacheOption func(c *cacheConfig)
@@ -8,6 +12,7 @@ type cacheConfig struct {
 	enableStrictCoalescing bool
 	backend                cacheBackendType
 	capacity               int
+	cleanupInterval        time.Duration
 }
 
 type cacheBackendType int
@@ -23,6 +28,7 @@ func defaultConfig() cacheConfig {
 		enableStrictCoalescing: false,
 		backend:                cacheBackendMap,
 		capacity:               0,
+		cleanupInterval:        0,
 	}
 }
 
@@ -70,5 +76,17 @@ func With2QBackend(capacity int) CacheOption {
 func EnableStrictCoalescing() CacheOption {
 	return func(c *cacheConfig) {
 		c.enableStrictCoalescing = true
+	}
+}
+
+// WithCleanupInterval specifies cleanup interval of expired items.
+//
+// Note that by default, a cache will be initialized without a cleaner.
+// Try tuning your cache size (and using non-map backend) before using this option.
+// Using cleanup interval on a cache with many items may decrease the through-put,
+// since the cleaner has to take a lock to iterate through all items.
+func WithCleanupInterval(interval time.Duration) CacheOption {
+	return func(c *cacheConfig) {
+		c.cleanupInterval = interval
 	}
 }
