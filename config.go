@@ -26,19 +26,14 @@ func defaultConfig() cacheConfig {
 	}
 }
 
-// WithCapacity sets the cache's capacity.
-func WithCapacity(capacity int) CacheOption {
-	return func(c *cacheConfig) {
-		c.capacity = capacity
-	}
-}
-
 // WithMapBackend specifies to use the built-in map for storing cache items (the default).
 // Note that the default map backend will not evict old cache items. If your key's cardinality is high, consider using
 // other backends such as LRU.
-func WithMapBackend() CacheOption {
+// Initial capacity needs to be non-negative.
+func WithMapBackend(initialCapacity int) CacheOption {
 	return func(c *cacheConfig) {
 		c.backend = cacheBackendMap
+		c.capacity = initialCapacity
 	}
 }
 

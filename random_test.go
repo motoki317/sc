@@ -13,7 +13,7 @@ import (
 func TestCache_GetRandom(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -39,7 +39,7 @@ func TestCache_GetRandom(t *testing.T) {
 func TestCache_GetRandom_GracefulReplacement(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -71,7 +71,7 @@ func TestCache_GetRandom_Parallel(t *testing.T) {
 		s           = 1.01
 		v           = 10
 	)
-	for _, c := range allCaches {
+	for _, c := range allCaches(cacheSize) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -80,7 +80,7 @@ func TestCache_GetRandom_Parallel(t *testing.T) {
 				time.Sleep(1 * time.Millisecond) // sleep for some time to simulate concurrent access
 				return "result-" + key, nil
 			}
-			cache, err := New[string, string](replaceFn, 10*time.Millisecond, 10*time.Millisecond, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(cacheSize))...)
+			cache, err := New[string, string](replaceFn, 10*time.Millisecond, 10*time.Millisecond, c.cacheOpts...)
 			assert.NoError(t, err)
 
 			var wg sync.WaitGroup
@@ -111,7 +111,7 @@ func TestCache_GetRandom_Parallel_GracefulReplacement(t *testing.T) {
 		s           = 1.01
 		v           = 10
 	)
-	for _, c := range allCaches {
+	for _, c := range allCaches(cacheSize) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -120,7 +120,7 @@ func TestCache_GetRandom_Parallel_GracefulReplacement(t *testing.T) {
 				time.Sleep(1 * time.Millisecond) // sleep for some time to simulate concurrent access
 				return "result-" + key, nil
 			}
-			cache, err := New[string, string](replaceFn, 10*time.Millisecond, 20*time.Millisecond, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(cacheSize))...)
+			cache, err := New[string, string](replaceFn, 10*time.Millisecond, 20*time.Millisecond, c.cacheOpts...)
 			assert.NoError(t, err)
 
 			var wg sync.WaitGroup

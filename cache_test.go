@@ -93,7 +93,7 @@ func TestNew(t *testing.T) {
 	t.Run("map cache", func(t *testing.T) {
 		t.Parallel()
 
-		c, err := New[string, string](fn, 0, 0, WithMapBackend())
+		c, err := New[string, string](fn, 0, 0, WithMapBackend(0))
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
 		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
@@ -103,14 +103,14 @@ func TestNew(t *testing.T) {
 	t.Run("map cache with invalid capacity", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := New[string, string](fn, 0, 0, WithMapBackend(), WithCapacity(-1))
+		_, err := New[string, string](fn, 0, 0, WithMapBackend(-1))
 		assert.Error(t, err)
 	})
 
 	t.Run("map cache with capacity", func(t *testing.T) {
 		t.Parallel()
 
-		c, err := New[string, string](fn, 0, 0, WithMapBackend(), WithCapacity(10))
+		c, err := New[string, string](fn, 0, 0, WithMapBackend(10))
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
 		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
@@ -120,7 +120,7 @@ func TestNew(t *testing.T) {
 	t.Run("strict map cache", func(t *testing.T) {
 		t.Parallel()
 
-		c, err := New[string, string](fn, 0, 0, WithMapBackend(), EnableStrictCoalescing())
+		c, err := New[string, string](fn, 0, 0, WithMapBackend(0), EnableStrictCoalescing())
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
 		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
@@ -130,7 +130,7 @@ func TestNew(t *testing.T) {
 	t.Run("strict map cache with capacity", func(t *testing.T) {
 		t.Parallel()
 
-		c, err := New[string, string](fn, 0, 0, WithMapBackend(), EnableStrictCoalescing(), WithCapacity(10))
+		c, err := New[string, string](fn, 0, 0, WithMapBackend(10), EnableStrictCoalescing())
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
 		assert.IsType(t, mapBackend[string, value[string]]{}, c.values)
@@ -224,7 +224,7 @@ func TestNew(t *testing.T) {
 func TestCache_Get(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -270,7 +270,7 @@ func TestCache_Get(t *testing.T) {
 func TestCache_Get_Async(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -326,7 +326,7 @@ func TestCache_Get_Async(t *testing.T) {
 func TestCache_Get_Error(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -351,7 +351,7 @@ func TestCache_Get_Error(t *testing.T) {
 func TestCache_Forget_Interrupt(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -398,7 +398,7 @@ func TestCache_Forget_Interrupt(t *testing.T) {
 func TestCache_Forget_NoInterrupt(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -445,7 +445,7 @@ func TestCache_Forget_NoInterrupt(t *testing.T) {
 func TestCache_Purge_Interrupt(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -503,7 +503,7 @@ func TestCache_Purge_Interrupt(t *testing.T) {
 func TestCache_Purge_NoInterrupt(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -555,7 +555,7 @@ func TestCache_Purge_NoInterrupt(t *testing.T) {
 func TestCache_ParallelReplacement(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -597,7 +597,7 @@ func TestCache_ParallelReplacement(t *testing.T) {
 func TestCache_MultipleValues(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -660,7 +660,7 @@ func TestCache_MultipleValues(t *testing.T) {
 func TestCache_NoStrictCoalescing(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range nonStrictCaches {
+	for _, c := range nonStrictCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -747,7 +747,7 @@ func TestCache_NoStrictCoalescing(t *testing.T) {
 func TestCache_StrictCoalescing(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range strictCaches {
+	for _, c := range strictCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
@@ -831,7 +831,7 @@ func TestCache_StrictCoalescing(t *testing.T) {
 func TestCache_ZeroTimeCache(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range strictCaches {
+	for _, c := range strictCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

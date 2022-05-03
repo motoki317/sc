@@ -38,21 +38,30 @@ type testCase struct {
 	cacheOpts []CacheOption
 }
 
-var (
-	nonStrictCaches = []testCase{
-		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend()}},
-		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(10)}},
-		{name: "2Q cache", cacheOpts: []CacheOption{With2QBackend(10)}},
+func nonStrictCaches(cap int) []testCase {
+	return []testCase{
+		{name: "map cache", cacheOpts: []CacheOption{WithMapBackend(cap)}},
+		{name: "LRU cache", cacheOpts: []CacheOption{WithLRUBackend(cap)}},
+		{name: "2Q cache", cacheOpts: []CacheOption{With2QBackend(cap)}},
 	}
-	strictCaches = Map[testCase, testCase](nonStrictCaches, func(t testCase, _ int) testCase {
+}
+
+func strictCaches(cap int) []testCase {
+	return Map(nonStrictCaches(cap), func(t testCase, _ int) testCase {
 		return testCase{
 			name:      "strict " + t.name,
 			cacheOpts: append(append([]CacheOption{}, t.cacheOpts...), EnableStrictCoalescing()),
 		}
 	})
-	allCaches      = append(append([]testCase{}, nonStrictCaches...), strictCaches...)
-	evictingCaches = Filter[testCase](allCaches, func(c testCase, _ int) bool { return !strings.HasSuffix(c.name, "map cache") })
-)
+}
+
+func allCaches(cap int) []testCase {
+	return append(nonStrictCaches(cap), strictCaches(cap)...)
+}
+
+func evictingCaches(cap int) []testCase {
+	return Filter(allCaches(cap), func(c testCase, _ int) bool { return !strings.HasSuffix(c.name, "map cache") })
+}
 
 func newZipfian(s, v float64, size uint64) func() string {
 	zipf := rand.NewZipf(rand.New(rand.NewSource(time.Now().UnixNano())), s, v, size)

@@ -83,7 +83,7 @@ func TestStats_HitRatio(t *testing.T) {
 func TestCache_Stats(t *testing.T) {
 	t.Parallel()
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

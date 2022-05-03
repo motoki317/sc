@@ -7,7 +7,7 @@ import (
 )
 
 func BenchmarkCache_Single_SameKey(b *testing.B) {
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		b.Run(c.name, func(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
@@ -35,13 +35,13 @@ func BenchmarkCache_Single_Zipfian(b *testing.B) {
 		v    = 100
 	)
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(size) {
 		c := c
 		b.Run(c.name, func(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
 				return "value", nil
 			}
-			cache, err := New[string, string](replaceFn, 1*time.Minute, 1*time.Minute, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(size))...)
+			cache, err := New[string, string](replaceFn, 1*time.Minute, 1*time.Minute, c.cacheOpts...)
 			if err != nil {
 				b.Error(err)
 			}
@@ -58,7 +58,7 @@ func BenchmarkCache_Single_Zipfian(b *testing.B) {
 }
 
 func BenchmarkCache_Parallel_SameKey(b *testing.B) {
-	for _, c := range allCaches {
+	for _, c := range allCaches(10) {
 		c := c
 		b.Run(c.name, func(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
@@ -87,13 +87,13 @@ func BenchmarkCache_Parallel_Zipfian(b *testing.B) {
 		v    = 100
 	)
 
-	for _, c := range allCaches {
+	for _, c := range allCaches(size) {
 		c := c
 		b.Run(c.name, func(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
 				return "value", nil
 			}
-			cache, err := New[string, string](replaceFn, 1*time.Minute, 1*time.Minute, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(size))...)
+			cache, err := New[string, string](replaceFn, 1*time.Minute, 1*time.Minute, c.cacheOpts...)
 			if err != nil {
 				b.Error(err)
 			}
@@ -120,14 +120,14 @@ func BenchmarkCache_RealWorkLoad(b *testing.B) {
 	)
 
 	// Only benchmark against evicting caches (not the built-in map backend) because the map backend can cache all values.
-	for _, c := range evictingCaches {
+	for _, c := range evictingCaches(size) {
 		c := c
 		b.Run(c.name, func(b *testing.B) {
 			replaceFn := func(ctx context.Context, key string) (string, error) {
 				time.Sleep(1 * time.Millisecond) // simulate some value that takes 1ms to load
 				return "value", nil
 			}
-			cache, err := New[string, string](replaceFn, 100*time.Millisecond, 200*time.Millisecond, append(append([]CacheOption{}, c.cacheOpts...), WithCapacity(size))...)
+			cache, err := New[string, string](replaceFn, 100*time.Millisecond, 200*time.Millisecond, c.cacheOpts...)
 			if err != nil {
 				b.Error(err)
 			}
