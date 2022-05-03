@@ -4,8 +4,6 @@ import (
 	"github.com/motoki317/sc/lru/internal"
 )
 
-var _ internal.LRU[int, int] = &Cache[int, int]{}
-
 // Cache is a lru cache. It automatically removes elements as new elements are
 // added if the capacity is reached. Items are removes based on how recently
 // they were used where the oldest items are removed first.

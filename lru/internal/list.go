@@ -25,7 +25,7 @@ func (e *Element[T]) Prev() *Element[T] {
 }
 
 // List implements a generic linked list based off of container/list. This
-// contains the minimimum functionally required for an lru cache.
+// contains the minimum functionally required for an LRU cache.
 type List[T any] struct {
 	root Element[T]
 	len  int
@@ -38,7 +38,7 @@ func NewList[T any]() *List[T] {
 	return l
 }
 
-// Init intializes the list with no elements.
+// Init initializes the list with no elements.
 func (l *List[T]) Init() {
 	l.root = Element[T]{}
 	l.root.prev = &l.root
