@@ -119,6 +119,11 @@ func (c *Cache[K, V]) ensureSpace(recentEvict bool) {
 	c.frequent.DeleteOldest()
 }
 
+// Len returns the number of items in the cache.
+func (c *Cache[K, V]) Len() int {
+	return c.recent.Len() + c.frequent.Len()
+}
+
 // DeleteIf deletes all elements that match the predicate.
 func (c *Cache[K, V]) DeleteIf(predicate func(key K, value V) bool) {
 	c.frequent.DeleteIf(predicate)
