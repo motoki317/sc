@@ -105,20 +105,20 @@ type cache[K comparable, V any] struct {
 // The cache prevents 'cache stampede' problem by coalescing multiple requests to the same key.
 func (c *cache[K, V]) Get(ctx context.Context, key K) (V, error) {
 	// Record time as soon as Get is called *before acquiring the lock* - this maximizes the reuse of values
-	t0 := time.Now()
+	calledAt := monoTimeNow()
 	c.mu.Lock()
 	val, ok := c.values.Get(key)
 
 retry:
 	// value exists and is fresh - just return
-	if ok && val.isFresh(t0, c.freshFor) {
+	if ok && val.isFresh(calledAt, c.freshFor) {
 		c.stats.Hits++
 		c.mu.Unlock()
 		return val.v, nil
 	}
 
 	// value exists and is stale - serve it stale while updating in the background
-	if ok && !val.isExpired(t0, c.ttl) {
+	if ok && !val.isExpired(calledAt, c.ttl) {
 		cl, ok := c.calls[key]
 		if !ok {
 			cl = &call[V]{}
@@ -183,8 +183,9 @@ func (c *cache[K, V]) Purge() {
 }
 
 func (c *cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
-	// Record time *just before* fn() is called - this maximizes the reuse of values
-	cl.val.t = time.Now()
+	// Record time *just before* fn() is called - this maximizes the reuse of values.
+	// It is a mistake to set created after fn finishes, otherwise Get may incorrectly return expired values as fresh.
+	cl.val.created = monoTimeNow()
 	cl.val.v, cl.err = c.fn(ctx, key)
 
 	c.mu.Lock()
@@ -202,7 +203,7 @@ func (c *cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
 // cleanup cleans up expired items from the cache, freeing memory.
 func (c *cache[K, V]) cleanup() {
 	c.mu.Lock()
-	now := time.Now() // Record time after acquiring the lock to maximize freeing of expired items
+	now := monoTimeNow() // Record time after acquiring the lock to maximize freeing of expired items
 	c.values.DeleteIf(func(key K, value value[V]) bool {
 		return value.isExpired(now, c.ttl)
 	})

@@ -8,28 +8,27 @@ import (
 )
 
 func Test_value_isFresh(t *testing.T) {
-	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
 	type args struct {
-		now      time.Time
+		now      monoTime
 		freshFor time.Duration
 	}
 	tests := []struct {
-		name string
-		t    time.Time
-		args args
-		want bool
+		name    string
+		created monoTime
+		args    args
+		want    bool
 	}{
-		{"not fresh", now.Add(-10 * time.Minute), args{now, 5 * time.Minute}, false},
-		{"fresh", now.Add(-3 * time.Minute), args{now, 5 * time.Minute}, true},
-		{"fresh (future)", now.Add(3 * time.Minute), args{now, 5 * time.Minute}, true},
-		{"fresh (distant future)", now.Add(30 * time.Minute), args{now, 5 * time.Minute}, true},
-		{"fresh (now)", now, args{now, 5 * time.Minute}, true},
+		{"not fresh", monoTime(-10 * time.Minute), args{0, 5 * time.Minute}, false},
+		{"fresh", monoTime(-3 * time.Minute), args{0, 5 * time.Minute}, true},
+		{"fresh (future)", monoTime(3 * time.Minute), args{0, 5 * time.Minute}, true},
+		{"fresh (distant future)", monoTime(30 * time.Minute), args{0, 5 * time.Minute}, true},
+		{"fresh (now)", 0, args{0, 5 * time.Minute}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &value[string]{
-				v: "",
-				t: tt.t,
+				v:       "",
+				created: tt.created,
 			}
 			assert.Equalf(t, tt.want, v.isFresh(tt.args.now, tt.args.freshFor), "isFresh(%v, %v)", tt.args.now, tt.args.freshFor)
 		})
@@ -37,28 +36,27 @@ func Test_value_isFresh(t *testing.T) {
 }
 
 func Test_value_isExpired(t *testing.T) {
-	now := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
 	type args struct {
-		now time.Time
+		now monoTime
 		ttl time.Duration
 	}
 	tests := []struct {
-		name string
-		t    time.Time
-		args args
-		want bool
+		name    string
+		created monoTime
+		args    args
+		want    bool
 	}{
-		{"expired", now.Add(-10 * time.Minute), args{now, 5 * time.Minute}, true},
-		{"not expired", now.Add(-3 * time.Minute), args{now, 5 * time.Minute}, false},
-		{"not expired (future)", now.Add(3 * time.Minute), args{now, 5 * time.Minute}, false},
-		{"not expired (distant future)", now.Add(30 * time.Minute), args{now, 5 * time.Minute}, false},
-		{"not expired (now)", now, args{now, 5 * time.Minute}, false},
+		{"expired", monoTime(-10 * time.Minute), args{0, 5 * time.Minute}, true},
+		{"not expired", monoTime(-3 * time.Minute), args{0, 5 * time.Minute}, false},
+		{"not expired (future)", monoTime(3 * time.Minute), args{0, 5 * time.Minute}, false},
+		{"not expired (distant future)", monoTime(30 * time.Minute), args{0, 5 * time.Minute}, false},
+		{"not expired (now)", 0, args{0, 5 * time.Minute}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &value[string]{
-				v: "",
-				t: tt.t,
+				v:       "",
+				created: tt.created,
 			}
 			assert.Equalf(t, tt.want, v.isExpired(tt.args.now, tt.args.ttl), "isExpired(%v, %v)", tt.args.now, tt.args.ttl)
 		})
