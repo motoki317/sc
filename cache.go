@@ -177,7 +177,10 @@ func (c *cache[K, V]) Purge() {
 	for _, cl := range c.calls {
 		cl.forgotten = true
 	}
-	c.calls = make(map[K]*call[V])
+	// Separate loop to be optimized to mapclear()
+	for key := range c.calls {
+		delete(c.calls, key)
+	}
 	c.values.Purge()
 	c.mu.Unlock()
 }

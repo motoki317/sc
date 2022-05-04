@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/motoki317/sc/lru"
 	"github.com/motoki317/sc/tq"
 )
 
@@ -165,7 +166,7 @@ func TestNew(t *testing.T) {
 		c, err := New[string, string](fn, 0, 0, WithLRUBackend(10))
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, lruBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, &lru.Cache[string, value[string]]{}, c.values)
 		assert.False(t, c.strictCoalescing)
 	})
 
@@ -175,7 +176,7 @@ func TestNew(t *testing.T) {
 		c, err := New[string, string](fn, 0, 0, WithLRUBackend(10), EnableStrictCoalescing())
 		assert.NoError(t, err)
 		assert.IsType(t, &Cache[string, string]{}, c)
-		assert.IsType(t, lruBackend[string, value[string]]{}, c.values)
+		assert.IsType(t, &lru.Cache[string, value[string]]{}, c.values)
 		assert.True(t, c.strictCoalescing)
 	})
 

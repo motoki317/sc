@@ -56,20 +56,8 @@ func (m mapBackend[K, V]) Purge() {
 	}
 }
 
-type lruBackend[K comparable, V any] struct {
-	*lru.Cache[K, V]
-}
-
 func newLRUBackend[K comparable, V any](cap int) backend[K, V] {
-	return lruBackend[K, V]{lru.New[K, V](lru.WithCapacity(cap))}
-}
-
-func (l lruBackend[K, V]) Delete(key K) {
-	l.Cache.Delete(key) // Function signature differs a bit
-}
-
-func (l lruBackend[K, V]) Purge() {
-	l.Cache.Flush()
+	return lru.New[K, V](lru.WithCapacity(cap))
 }
 
 func new2QBackend[K comparable, V any](cap int) backend[K, V] {

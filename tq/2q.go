@@ -133,20 +133,14 @@ func (c *Cache[K, V]) DeleteIf(predicate func(key K, value V) bool) {
 
 // Delete removes the provided key from the cache.
 func (c *Cache[K, V]) Delete(key K) {
-	if c.frequent.Delete(key) {
-		return
-	}
-	if c.recent.Delete(key) {
-		return
-	}
-	if c.recentEvict.Delete(key) {
-		return
-	}
+	c.frequent.Delete(key)
+	c.recent.Delete(key)
+	c.recentEvict.Delete(key)
 }
 
 // Purge removes all values from the cache.
 func (c *Cache[K, V]) Purge() {
-	c.frequent.Flush()
-	c.recent.Flush()
-	c.recentEvict.Flush()
+	c.frequent.Purge()
+	c.recent.Purge()
+	c.recentEvict.Purge()
 }

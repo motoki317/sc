@@ -82,15 +82,10 @@ func (c *Cache[K, V]) Peek(key K) (value V, ok bool) {
 }
 
 // Delete an item from the cache.
-func (c *Cache[K, V]) Delete(key K) bool {
-	e, ok := c.items[key]
-	if !ok {
-		return false
+func (c *Cache[K, V]) Delete(key K) {
+	if e, ok := c.items[key]; ok {
+		c.deleteElement(e)
 	}
-
-	c.deleteElement(e)
-
-	return true
 }
 
 // DeleteIf deletes all elements that match the predicate.
@@ -116,8 +111,10 @@ func (c *Cache[K, V]) deleteElement(e *internal.Element[entry[K, V]]) {
 	c.ll.Remove(e)
 }
 
-// Flush deletes all items from the cache.
-func (c *Cache[K, V]) Flush() {
+// Purge deletes all items from the cache.
+func (c *Cache[K, V]) Purge() {
 	c.ll.Init()
-	c.items = make(map[K]*internal.Element[entry[K, V]])
+	for key := range c.items {
+		delete(c.items, key)
+	}
 }
