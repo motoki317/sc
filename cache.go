@@ -3,7 +3,6 @@ package sc
 import (
 	"context"
 	"errors"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -71,59 +70,24 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 	}
 
 	if config.cleanupInterval > 0 {
-		closer := make(chan struct{})
-		c.cl = newCleaner(c.cache, config.cleanupInterval, closer)
-		runtime.SetFinalizer(c, stopCleaner[K, V])
+		startCleaner(c, config.cleanupInterval)
 	}
 
 	return c, nil
 }
 
-type cleaner[K comparable, V any] struct {
-	closer chan struct{}
-	c      *cache[K, V]
-}
-
-func newCleaner[K comparable, V any](c *cache[K, V], interval time.Duration, closer chan struct{}) *cleaner[K, V] {
-	cl := &cleaner[K, V]{
-		closer: closer,
-		c:      c,
-	}
-	go cl.run(interval)
-	return cl
-}
-
-func (c *cleaner[K, V]) run(interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			c.c.cleanup()
-		case <-c.closer:
-			return
-		}
-	}
-}
-
-func stopCleaner[K comparable, V any](c *Cache[K, V]) {
-	c.cl.closer <- struct{}{}
-}
-
 // Cache represents a single cache instance.
 // All methods are safe to be called from multiple goroutines.
-// All cache implementations prevent the 'cache stampede' problem by coalescing multiple requests to the same key.
 //
 // Notice that Cache doesn't have Set(key K, value V) method - this is intentional. Users are expected to delegate
 // the cache replacement logic to Cache by simply calling Get.
 type Cache[K comparable, V any] struct {
 	*cache[K, V]
-	cl *cleaner[K, V]
+	// Embedding must be a pointer to cache, otherwise finalizer is not run.
+	// See cleaner doc for the reason Cache and cache is separate.
 }
 
-// cache is the actual cache instance.
-// See https://github.com/patrickmn/go-cache/blob/46f407853014144407b6c2ec7ccc76bf67958d93/cache.go#L1115
-// for the reason Cache and cache is separate.
+// cache is an internal cache instance.
 type cache[K comparable, V any] struct {
 	values           backend[K, value[V]]
 	calls            map[K]*call[V]
@@ -134,11 +98,11 @@ type cache[K comparable, V any] struct {
 	stats            Stats
 }
 
-// Get retrieves an item from the cache.
-// Returns the found value and a nil error if found.
-// May return a stale item (older than freshFor, but younger than ttl) while a single goroutine is launched
-// in the background to update the cache.
+// Get retrieves an item. If an item is not in the cache, it automatically loads a new item into the cache.
+// May return a stale item (older than freshFor, but younger than ttl) while a new item is being fetched in the background.
 // Returns an error as it is if replaceFn returns an error.
+//
+// The cache prevents 'cache stampede' problem by coalescing multiple requests to the same key.
 func (c *cache[K, V]) Get(ctx context.Context, key K) (V, error) {
 	// Record time as soon as Get is called *before acquiring the lock* - this maximizes the reuse of values
 	t0 := time.Now()
