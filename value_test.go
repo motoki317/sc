@@ -19,6 +19,7 @@ func Test_value_isFresh(t *testing.T) {
 		want    bool
 	}{
 		{"not fresh", monoTime(-10 * time.Minute), args{0, 5 * time.Minute}, false},
+		{"exact fresh", monoTime(-5 * time.Minute), args{0, 5 * time.Minute}, true},
 		{"fresh", monoTime(-3 * time.Minute), args{0, 5 * time.Minute}, true},
 		{"fresh (future)", monoTime(3 * time.Minute), args{0, 5 * time.Minute}, true},
 		{"fresh (distant future)", monoTime(30 * time.Minute), args{0, 5 * time.Minute}, true},
@@ -47,6 +48,7 @@ func Test_value_isExpired(t *testing.T) {
 		want    bool
 	}{
 		{"expired", monoTime(-10 * time.Minute), args{0, 5 * time.Minute}, true},
+		{"exact not expired", monoTime(-5 * time.Minute), args{0, 5 * time.Minute}, false},
 		{"not expired", monoTime(-3 * time.Minute), args{0, 5 * time.Minute}, false},
 		{"not expired (future)", monoTime(3 * time.Minute), args{0, 5 * time.Minute}, false},
 		{"not expired (distant future)", monoTime(30 * time.Minute), args{0, 5 * time.Minute}, false},

@@ -31,7 +31,7 @@ type value[V any] struct {
 }
 
 func (v *value[V]) isFresh(now monoTime, freshFor time.Duration) bool {
-	return now < v.created+monoTime(freshFor)
+	return now <= v.created+monoTime(freshFor)
 }
 
 func (v *value[V]) isExpired(now monoTime, ttl time.Duration) bool {
