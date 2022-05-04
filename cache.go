@@ -80,25 +80,25 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 }
 
 type cleaner[K comparable, V any] struct {
-	ticker *time.Ticker
 	closer chan struct{}
 	c      *cache[K, V]
 }
 
 func newCleaner[K comparable, V any](c *cache[K, V], interval time.Duration, closer chan struct{}) *cleaner[K, V] {
 	cl := &cleaner[K, V]{
-		ticker: time.NewTicker(interval),
 		closer: closer,
 		c:      c,
 	}
-	go cl.run()
+	go cl.run(interval)
 	return cl
 }
 
-func (c *cleaner[K, V]) run() {
+func (c *cleaner[K, V]) run(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	for {
 		select {
-		case <-c.ticker.C:
+		case <-ticker.C:
 			c.c.cleanup()
 		case <-c.closer:
 			return
