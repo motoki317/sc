@@ -349,7 +349,7 @@ func TestCache_Get_Error(t *testing.T) {
 	}
 }
 
-// TestCache_Forget_Interrupt ensures that calling Cache.Forget will make later get calls to trigger replaceFn.
+// TestCache_Forget_Interrupt ensures that calling Cache.Forget will make later Get calls trigger replaceFn.
 func TestCache_Forget_Interrupt(t *testing.T) {
 	t.Parallel()
 
@@ -443,7 +443,81 @@ func TestCache_Forget_NoInterrupt(t *testing.T) {
 	}
 }
 
-// TestCache_Purge_Interrupt ensures that calling Cache.Purge will make all later get calls to trigger replaceFn.
+// TestCache_ForgetIf ensures that calling Cache.ForgetIf will make later Get calls trigger replaceFn.
+func TestCache_ForgetIf(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches(10) {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				atomic.AddInt64(&cnt, 1)
+				time.Sleep(750 * time.Millisecond)
+				return "result-" + key, nil
+			}
+			cache, err := New[string, string](replaceFn, 5*time.Second, 5*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			var wg sync.WaitGroup
+
+			callAndAssert := func(key string) {
+				defer wg.Done()
+				v, err := cache.Get(context.Background(), key)
+				assert.NoError(t, err)
+				assert.Equal(t, "result-"+key, v)
+			}
+			assertInCache := func(key string) {
+				v, err := cache.Get(context.Background(), key)
+				assert.NoError(t, err)
+				assert.Equal(t, "result-"+key, v)
+			}
+
+			// k1: Do not forget
+			// k2: Forget, no interrupt
+			// k3: Do not forget
+			// k4: Forget, interrupt
+			t0 := time.Now()
+			// t=0ms, call to k1, k2
+			wg.Add(2)
+			go callAndAssert("k1")
+			go callAndAssert("k2")
+			wg.Wait()
+			// t=750ms, assert k1 and k2 are in cache, and replaceFn is called twice
+			assert.InDelta(t, 750*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+			assert.EqualValues(t, 2, cnt)
+			assertInCache("k1")
+			assertInCache("k2")
+			assert.EqualValues(t, 2, cnt)
+
+			// t=750ms, call to k3, k4
+			wg.Add(2)
+			go callAndAssert("k3")
+			go callAndAssert("k4")
+			time.Sleep(500 * time.Millisecond)
+
+			// t=1250ms, Forget k2, k4 then 2nd call to k2, k4
+			cache.ForgetIf(func(key string) bool { return key == "k2" || key == "k4" })
+			wg.Add(2)
+			go callAndAssert("k2")
+			go callAndAssert("k4")
+			wg.Wait()
+
+			// t=2000ms, assert replaceFn was triggered 6 times
+			assert.InDelta(t, 2000*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+			assert.EqualValues(t, 6, cnt)
+			assertInCache("k1")
+			assertInCache("k2")
+			assertInCache("k3")
+			assertInCache("k4")
+			assert.EqualValues(t, 6, cnt)
+		})
+	}
+}
+
+// TestCache_Purge_Interrupt ensures that calling Cache.Purge will make all later Get calls trigger replaceFn.
 func TestCache_Purge_Interrupt(t *testing.T) {
 	t.Parallel()
 

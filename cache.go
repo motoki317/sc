@@ -169,9 +169,23 @@ func (c *cache[K, V]) Forget(key K) {
 	c.mu.Unlock()
 }
 
-// Purge instructs the cache to delete all values, and Forget about all ongoing calls.
-// Note that frequently calling Purge will worsen the cache performance.
-// If you only need to Forget about a specific key, use Forget instead.
+// ForgetIf instructs the cache to Forget about all keys that match the predicate.
+func (c *cache[K, V]) ForgetIf(predicate func(key K) bool) {
+	c.mu.Lock()
+	for key, ca := range c.calls {
+		if predicate(key) {
+			delete(c.calls, key)
+			ca.forgotten = true
+		}
+	}
+	c.values.DeleteIf(func(key K, _ value[V]) bool { return predicate(key) })
+	c.mu.Unlock()
+}
+
+// Purge instructs the cache to Forget about all keys.
+//
+// Note that frequently calling Purge may affect the hit ratio.
+// If you only need to Forget about a specific key, use Forget or ForgetIf instead.
 func (c *cache[K, V]) Purge() {
 	c.mu.Lock()
 	for _, cl := range c.calls {
