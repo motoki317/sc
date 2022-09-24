@@ -119,9 +119,9 @@ retry:
 
 	// value exists and is stale - serve it stale while updating in the background
 	if ok && !val.isExpired(calledAt, c.ttl) {
-		cl, ok := c.calls[key]
+		_, ok := c.calls[key]
 		if !ok {
-			cl = &call[V]{}
+			cl := &call[V]{}
 			cl.wg.Add(1)
 			c.calls[key] = cl
 			go c.set(context.Background(), cl, key) // Use empty context so as not to be cancelled by the original context

@@ -13,7 +13,7 @@ var t0 = time.Now()
 type monoTime int64
 
 func monoTimeNow() monoTime {
-	return monoTime(time.Now().Sub(t0))
+	return monoTime(time.Since(t0))
 }
 
 // value represents a cache item.
