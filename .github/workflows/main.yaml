@@ -16,9 +16,13 @@ jobs:
           - "1.20"
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
+      - uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-gomod-${{ matrix.go }}-${{ hashFiles('**/go.sum') }}
       - run: go mod download
   lint:
     name: Lint
@@ -29,7 +33,7 @@ jobs:
           - "1.20"
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
       - name: golangci-lint
@@ -48,14 +52,27 @@ jobs:
       GOCACHE: "/tmp/go/cache"
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
+      - uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-gomod-${{ matrix.go }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-gomod-
+      - uses: actions/cache@v3
+        with:
+          path: /tmp/go/cache
+          key: ${{ runner.os }}-go-build-${{ matrix.go }}-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-go-build-${{ matrix.go }}-${{ github.ref }}-
+            ${{ runner.os }}-go-build-${{ matrix.go }}-
       - name: Run tests
         run: |-
           go test ./... -race -coverprofile=coverage.txt -shuffle=on
       - name: Upload coverage data
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v2
         with:
           files: ./coverage.txt
   bench:
@@ -69,7 +86,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
       - name: Install cob
