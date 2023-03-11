@@ -12,8 +12,4 @@ type call[V any] struct {
 	// and are only read after the WaitGroup is done.
 	val value[V]
 	err error
-
-	// forgotten indicates whether Forget was called with this call's key
-	// while the call was still in flight.
-	forgotten bool
 }

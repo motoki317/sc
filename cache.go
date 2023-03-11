@@ -161,9 +161,6 @@ retry:
 // and any future Get calls will immediately retrieve a new item.
 func (c *cache[K, V]) Forget(key K) {
 	c.mu.Lock()
-	if ca, ok := c.calls[key]; ok {
-		ca.forgotten = true
-	}
 	delete(c.calls, key)
 	c.values.Delete(key)
 	c.mu.Unlock()
@@ -172,10 +169,9 @@ func (c *cache[K, V]) Forget(key K) {
 // ForgetIf instructs the cache to Forget about all keys that match the predicate.
 func (c *cache[K, V]) ForgetIf(predicate func(key K) bool) {
 	c.mu.Lock()
-	for key, ca := range c.calls {
+	for key := range c.calls {
 		if predicate(key) {
 			delete(c.calls, key)
-			ca.forgotten = true
 		}
 	}
 	c.values.DeleteIf(func(key K, _ value[V]) bool { return predicate(key) })
@@ -188,10 +184,6 @@ func (c *cache[K, V]) ForgetIf(predicate func(key K) bool) {
 // If you only need to Forget about a specific key, use Forget or ForgetIf instead.
 func (c *cache[K, V]) Purge() {
 	c.mu.Lock()
-	for _, cl := range c.calls {
-		cl.forgotten = true
-	}
-	// Separate loop to be optimized to mapclear()
 	for key := range c.calls {
 		delete(c.calls, key)
 	}
@@ -207,11 +199,11 @@ func (c *cache[K, V]) set(ctx context.Context, cl *call[V], key K) {
 
 	c.mu.Lock()
 	c.stats.Replacements++
-	if !cl.forgotten {
+	if c.calls[key] == cl {
 		if cl.err == nil {
 			c.values.Set(key, cl.val)
 		}
-		delete(c.calls, key) // this deletion needs to be inside 'if !cl.forgotten' block, because there may be a new ongoing call
+		delete(c.calls, key) // this deletion needs to be inside 'if c.calls[key] == cl' block, because there may be a new ongoing call
 	}
 	c.mu.Unlock()
 	cl.wg.Done()
