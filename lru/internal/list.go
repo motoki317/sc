@@ -3,25 +3,8 @@ package internal
 // Element is an element in a linked list.
 type Element[T any] struct {
 	prev, next *Element[T]
-	list       *List[T]
 
 	Value T
-}
-
-// Next returns the next item in the list.
-func (e *Element[T]) Next() *Element[T] {
-	if e.list == nil || e.next == &e.list.root {
-		return nil
-	}
-	return e.next
-}
-
-// Prev returns the previous item in the list.
-func (e *Element[T]) Prev() *Element[T] {
-	if e.list == nil || e.prev == &e.list.root {
-		return nil
-	}
-	return e.prev
 }
 
 // List implements a generic linked list based off of container/list. This
@@ -51,51 +34,56 @@ func (l *List[T]) Len() int {
 	return l.len
 }
 
-// MoveToFront moves the given element to the front of the list.
-func (l *List[T]) MoveToFront(e *Element[T]) {
-	if e.list != l || l.root.next == e {
-		return
+// Next returns the next item in the list.
+func (l *List[T]) Next(e *Element[T]) *Element[T] {
+	if e.next == &l.root {
+		return nil
 	}
-	l.move(e, &l.root)
+	return e.next
 }
 
-func (l *List[T]) move(e, at *Element[T]) *Element[T] {
-	if e == at {
-		return e
+// Prev returns the previous item in the list.
+func (l *List[T]) Prev(e *Element[T]) *Element[T] {
+	if e.prev == &l.root {
+		return nil
 	}
+	return e.prev
+}
+
+// MoveToFront moves the given element to the front of the list.
+func (l *List[T]) MoveToFront(e *Element[T]) {
+	if l.root.next == e { // Already at front
+		return
+	}
+
+	// Remove
 	e.prev.next = e.next
 	e.next.prev = e.prev
 
-	e.prev = at
-	e.next = at.next
+	// Push front
+	e.prev = &l.root
+	e.next = l.root.next
 	e.prev.next = e
 	e.next.prev = e
-
-	return e
 }
 
 // Remove removes the given element from the list.
 func (l *List[T]) Remove(e *Element[T]) T {
 	e.prev.next = e.next
 	e.next.prev = e.prev
-	e.list.len--
 	e.next = nil
 	e.prev = nil
-	e.list = nil
+	l.len--
 	return e.Value
 }
 
 // PushFront adds a new value to the front of the list.
 func (l *List[T]) PushFront(value T) *Element[T] {
-	return l.insert(&Element[T]{Value: value}, &l.root)
-}
-
-func (l *List[T]) insert(e, at *Element[T]) *Element[T] {
-	e.prev = at
-	e.next = at.next
+	e := &Element[T]{Value: value}
+	e.prev = &l.root
+	e.next = l.root.next
 	e.prev.next = e
 	e.next.prev = e
-	e.list = l
 	l.len++
 	return e
 }

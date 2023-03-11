@@ -14,7 +14,7 @@ func TestElement_Next(t *testing.T) {
 
 		e := ll.PushFront(1)
 
-		require.Nil(t, e.Next())
+		require.Nil(t, ll.Next(e))
 	})
 	t.Run("next", func(t *testing.T) {
 		ll := internal.NewList[int]()
@@ -22,7 +22,7 @@ func TestElement_Next(t *testing.T) {
 		e1 := ll.PushFront(1)
 		e2 := ll.PushFront(2)
 
-		require.Equal(t, e1, e2.Next())
+		require.Equal(t, e1, ll.Next(e2))
 	})
 }
 
@@ -32,7 +32,7 @@ func TestElement_Prev(t *testing.T) {
 
 		e := ll.PushFront(1)
 
-		require.Nil(t, e.Prev())
+		require.Nil(t, ll.Prev(e))
 	})
 	t.Run("next", func(t *testing.T) {
 		ll := internal.NewList[int]()
@@ -40,7 +40,7 @@ func TestElement_Prev(t *testing.T) {
 		e1 := ll.PushFront(1)
 		e2 := ll.PushFront(2)
 
-		require.Equal(t, e2, e1.Prev())
+		require.Equal(t, e2, ll.Prev(e1))
 	})
 }
 
