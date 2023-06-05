@@ -349,6 +349,90 @@ func TestCache_Get_Error(t *testing.T) {
 	}
 }
 
+func TestCache_GetIfExists(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches(10) {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				t.Log("replaceFn triggered")
+				atomic.AddInt64(&cnt, 1)
+				return "result-" + key, nil
+			}
+			cache, err := New[string, string](replaceFn, 500*time.Millisecond, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			// Check empty
+			_, ok := cache.GetIfExists("k1")
+			assert.False(t, ok)
+			_, ok = cache.GetIfExists("k2")
+			assert.False(t, ok)
+			_, ok = cache.GetIfExists("k3")
+			assert.False(t, ok)
+			assert.EqualValues(t, 0, cnt)
+
+			// trigger value replacement
+			val, err := cache.Get(context.Background(), "k1")
+			assert.NoError(t, err)
+			assert.Equal(t, "result-k1", val)
+			assert.EqualValues(t, 1, cnt)
+			val, err = cache.Get(context.Background(), "k2")
+			assert.NoError(t, err)
+			assert.Equal(t, "result-k2", val)
+			assert.EqualValues(t, 2, cnt)
+
+			// Check k1 and k2 are present
+			val, ok = cache.GetIfExists("k1")
+			assert.True(t, ok)
+			assert.Equal(t, "result-k1", val)
+			val, ok = cache.GetIfExists("k2")
+			assert.True(t, ok)
+			assert.Equal(t, "result-k2", val)
+			_, ok = cache.GetIfExists("k3")
+			assert.False(t, ok)
+			assert.EqualValues(t, 2, cnt)
+
+			// test graceful hit
+			time.Sleep(750 * time.Millisecond)
+			val, ok = cache.GetIfExists("k1")
+			assert.True(t, ok)
+			assert.Equal(t, "result-k1", val)
+			val, ok = cache.GetIfExists("k2")
+			assert.True(t, ok)
+			assert.Equal(t, "result-k2", val)
+			_, ok = cache.GetIfExists("k3")
+			assert.False(t, ok)
+			assert.EqualValues(t, 2, cnt)
+
+			// test forget
+			cache.Forget("k2")
+
+			val, ok = cache.GetIfExists("k1")
+			assert.True(t, ok)
+			assert.Equal(t, "result-k1", val)
+			_, ok = cache.GetIfExists("k2")
+			assert.False(t, ok)
+			_, ok = cache.GetIfExists("k3")
+			assert.False(t, ok)
+			assert.EqualValues(t, 2, cnt)
+
+			// test expiration
+			time.Sleep(500 * time.Millisecond)
+			_, ok = cache.GetIfExists("k1")
+			assert.False(t, ok)
+			_, ok = cache.GetIfExists("k2")
+			assert.False(t, ok)
+			_, ok = cache.GetIfExists("k3")
+			assert.False(t, ok)
+			assert.EqualValues(t, 2, cnt)
+		})
+	}
+}
+
 // TestCache_Forget_Interrupt ensures that calling Cache.Forget will make later Get calls trigger replaceFn.
 func TestCache_Forget_Interrupt(t *testing.T) {
 	t.Parallel()

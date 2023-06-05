@@ -156,6 +156,31 @@ retry:
 	return cl.val.v, cl.err
 }
 
+// GetIfExists retrieves an item without triggering value replacements.
+//
+// This method doesn't wait for value replacement to finish, even if there is an ongoing one.
+func (c *cache[K, V]) GetIfExists(key K) (v V, ok bool) {
+	// Record time as soon as Get is called *before acquiring the lock* - this maximizes the reuse of values
+	calledAt := monoTimeNow()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	val, ok := c.values.Get(key)
+
+	// value exists (includes stale values)
+	if ok && !val.isExpired(calledAt, c.ttl) {
+		if val.isFresh(calledAt, c.freshFor) {
+			c.stats.Hits++
+		} else {
+			c.stats.GraceHits++
+		}
+		return val.v, true
+	}
+
+	// value doesn't exist
+	c.stats.Misses++
+	return val.v, false
+}
+
 // Forget instructs the cache to forget about the key.
 // Corresponding item will be deleted, ongoing cache replacement results (if any) will not be added to the cache,
 // and any future Get calls will immediately retrieve a new item.
