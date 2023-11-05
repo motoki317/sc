@@ -176,7 +176,7 @@ func (c *cache[K, V]) GetIfExists(key K) (v V, ok bool) {
 		return val.v, true
 	}
 
-	// value doesn't exist
+	// value doesn't exist, or is expired
 	c.stats.Misses++
 	return val.v, false
 }
