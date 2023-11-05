@@ -433,6 +433,59 @@ func TestCache_GetIfExists(t *testing.T) {
 	}
 }
 
+// TestCache_Notify tests that Cache.Notify will replace the value in background.
+func TestCache_Notify(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches(10) {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			var cnt int64
+			replaceFn := func(ctx context.Context, key string) (string, error) {
+				assert.Equal(t, "k1", key)
+				atomic.AddInt64(&cnt, 1)
+				time.Sleep(500 * time.Millisecond)
+				return "result1", nil
+			}
+			cache, err := New[string, string](replaceFn, 1*time.Second, 1*time.Second, c.cacheOpts...)
+			assert.NoError(t, err)
+
+			// Start test t=0ms
+			t0 := time.Now()
+
+			// Notify value retrieval - this should launch goroutine in background
+			cache.Notify("k1")
+			// Test that value is still not here
+			_, ok := cache.GetIfExists("k1")
+			assert.False(t, ok)
+
+			time.Sleep(750 * time.Millisecond)
+			// t=750ms, value should be cached
+			// Check that both GetIfExists and Get returns value immediately
+			v, ok := cache.GetIfExists("k1")
+			assert.True(t, ok)
+			assert.Equal(t, "result1", v)
+			assert.InDelta(t, 750*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+			assert.EqualValues(t, 1, cnt)
+
+			v, err = cache.Get(context.Background(), "k1")
+			assert.NoError(t, err)
+			assert.Equal(t, "result1", v)
+			assert.InDelta(t, 750*time.Millisecond, time.Since(t0), float64(100*time.Millisecond))
+			assert.EqualValues(t, 1, cnt)
+
+			// t=750ms, notify once again - this should do *nothing*
+			cache.Notify("k1")
+
+			time.Sleep(750 * time.Millisecond)
+			// t=1500ms, assert that value was replaced only once
+			assert.EqualValues(t, 1, cnt)
+		})
+	}
+}
+
 // TestCache_Forget_Interrupt ensures that calling Cache.Forget will make later Get calls trigger replaceFn.
 func TestCache_Forget_Interrupt(t *testing.T) {
 	t.Parallel()

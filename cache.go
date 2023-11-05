@@ -181,6 +181,30 @@ func (c *cache[K, V]) GetIfExists(key K) (v V, ok bool) {
 	return val.v, false
 }
 
+// Notify instructs the cache to retrieve value for key if value does not exist or is stale, in a non-blocking manner.
+func (c *cache[K, V]) Notify(key K) {
+	// Record time as soon as Get is called *before acquiring the lock* - this maximizes the reuse of values
+	calledAt := monoTimeNow()
+	c.mu.Lock()
+	val, ok := c.values.Get(key)
+
+	// value exists and is fresh - do nothing
+	if ok && val.isFresh(calledAt, c.freshFor) {
+		c.mu.Unlock()
+		return
+	}
+
+	// value exists and is stale, or value doesn't exist - launch goroutine to update in the background
+	_, ok = c.calls[key]
+	if !ok {
+		cl := &call[V]{}
+		cl.wg.Add(1)
+		c.calls[key] = cl
+		go c.set(context.Background(), cl, key) // Use empty context so as not to be cancelled by the original context
+	}
+	c.mu.Unlock()
+}
+
 // Forget instructs the cache to forget about the key.
 // Corresponding item will be deleted, ongoing cache replacement results (if any) will not be added to the cache,
 // and any future Get calls will immediately retrieve a new item.
