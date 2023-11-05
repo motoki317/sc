@@ -7,13 +7,14 @@ import (
 // Stats represents cache metrics.
 //
 // Cache hit ratio can be calculated as:
-// 	(cache hit ratio) = (Hits + GraceHits) / (Hits + GraceHits + Misses)
+//
+//	(cache hit ratio) = (Hits + GraceHits) / (Hits + GraceHits + Misses)
 type Stats struct {
-	// Hits is the number of fresh cache hits in Cache.Get.
+	// Hits is the number of fresh cache hits in (*Cache).Get.
 	Hits uint64
-	// GraceHits is the number of stale cache hits in Cache.Get.
+	// GraceHits is the number of stale cache hits in (*Cache).Get.
 	GraceHits uint64
-	// Misses is the number of cache misses in Cache.Get.
+	// Misses is the number of cache misses in (*Cache).Get.
 	Misses uint64
 	// Replacements is the number of times replaceFn is called.
 	// Note that this field is incremented after replaceFn finishes to reduce lock time.

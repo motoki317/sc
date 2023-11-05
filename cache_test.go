@@ -222,7 +222,7 @@ func TestNew(t *testing.T) {
 	})
 }
 
-// TestCache_Get calls Cache.Get multiple times and ensures a value is reused.
+// TestCache_Get calls (*Cache).Get multiple times and ensures a value is reused.
 func TestCache_Get(t *testing.T) {
 	t.Parallel()
 
@@ -268,7 +268,7 @@ func TestCache_Get(t *testing.T) {
 	}
 }
 
-// TestCache_Get_Async ensures that Cache.Get will trigger background fetch if a stale value is found.
+// TestCache_Get_Async ensures that (*Cache).Get will trigger background fetch if a stale value is found.
 func TestCache_Get_Async(t *testing.T) {
 	t.Parallel()
 
@@ -324,7 +324,7 @@ func TestCache_Get_Async(t *testing.T) {
 	}
 }
 
-// TestCache_Get_Error ensures Cache.Get returns an error if replaceFn returns an error.
+// TestCache_Get_Error ensures (*Cache).Get returns an error if replaceFn returns an error.
 func TestCache_Get_Error(t *testing.T) {
 	t.Parallel()
 
@@ -433,7 +433,7 @@ func TestCache_GetIfExists(t *testing.T) {
 	}
 }
 
-// TestCache_Notify tests that Cache.Notify will replace the value in background.
+// TestCache_Notify tests that (*Cache).Notify will replace the value in background.
 func TestCache_Notify(t *testing.T) {
 	t.Parallel()
 
@@ -486,7 +486,7 @@ func TestCache_Notify(t *testing.T) {
 	}
 }
 
-// TestCache_Forget_Interrupt ensures that calling Cache.Forget will make later Get calls trigger replaceFn.
+// TestCache_Forget_Interrupt ensures that calling (*Cache).Forget will make later Get calls trigger replaceFn.
 func TestCache_Forget_Interrupt(t *testing.T) {
 	t.Parallel()
 
@@ -580,7 +580,7 @@ func TestCache_Forget_NoInterrupt(t *testing.T) {
 	}
 }
 
-// TestCache_ForgetIf ensures that calling Cache.ForgetIf will make later Get calls trigger replaceFn.
+// TestCache_ForgetIf ensures that calling (*Cache).ForgetIf will make later Get calls trigger replaceFn.
 func TestCache_ForgetIf(t *testing.T) {
 	t.Parallel()
 
@@ -806,7 +806,7 @@ func TestCache_ParallelReplacement(t *testing.T) {
 	}
 }
 
-// TestCache_MultipleValues calls Cache.Get with some different keys, and ensures correct values are returned.
+// TestCache_MultipleValues calls (*Cache).Get with some different keys, and ensures correct values are returned.
 func TestCache_MultipleValues(t *testing.T) {
 	t.Parallel()
 
