@@ -49,13 +49,6 @@ For a more detailed guide, see [reference](https://pkg.go.dev/github.com/motoki3
 
 ## Supported cache backends (cache replacement policy)
 
-The default backend is the built-in map.
-This is ultra-lightweight, but does **not** evict items.
-You should only use the built-in map backend if your key's cardinality is finite,
-and you are comfortable holding **all** values in-memory.
-
-Otherwise, you should use LRU or 2Q backend which automatically evicts overflown items.
-
 - Built-in map (default)
 - LRU (Least Recently Used)
 - 2Q (Two Queue Cache)

@@ -23,12 +23,16 @@ const (
 	cacheBackend2Q
 )
 
-func defaultConfig() cacheConfig {
+func defaultConfig(ttl time.Duration) cacheConfig {
+	cleanupInterval := 2 * ttl
+	if ttl == 0 {
+		cleanupInterval = 60 * time.Second
+	}
 	return cacheConfig{
 		enableStrictCoalescing: false,
 		backend:                cacheBackendMap,
 		capacity:               0,
-		cleanupInterval:        0,
+		cleanupInterval:        cleanupInterval,
 	}
 }
 
@@ -80,8 +84,13 @@ func EnableStrictCoalescing() CacheOption {
 
 // WithCleanupInterval specifies cleanup interval of expired items.
 //
-// Note that by default, a cache will be initialized without a cleaner.
-// Try tuning your cache size (and using non-map backend) before using this option.
+// Setting interval of 0 (or negative) will disable the cleaner.
+// This means if using non-evicting cache backend (that is, the default, built-in map backend),
+// the cache keeps holding key-value pairs indefinitely.
+// If cardinality of key is very large, this leads to memory leak.
+//
+// By default, a cleaner runs every once in 2x ttl (or every 60s if ttl == 0).
+// Try tuning your cache size (and using non-map backend) before tuning this option.
 // Using cleanup interval on a cache with many items may decrease the through-put,
 // since the cleaner has to acquire the lock to iterate through all items.
 func WithCleanupInterval(interval time.Duration) CacheOption {

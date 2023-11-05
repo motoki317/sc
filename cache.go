@@ -32,7 +32,7 @@ func New[K comparable, V any](replaceFn replaceFunc[K, V], freshFor, ttl time.Du
 		return nil, errors.New("freshFor cannot be longer than ttl")
 	}
 
-	config := defaultConfig()
+	config := defaultConfig(ttl)
 	for _, option := range options {
 		option(&config)
 	}
