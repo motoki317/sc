@@ -42,7 +42,7 @@ For a more detailed guide, see [reference](https://pkg.go.dev/github.com/motoki3
 - Supports 1.18 generics - both key and value are generic.
     - No `interface{}` or `any` used other than in type parameters, even in internal implementations.
 - All methods are safe to be called from multiple goroutines.
-- Ensures only a single goroutine launched per key to retrieve value.
+- Ensures only a single goroutine is launched per key to retrieve value.
 - Allows 'graceful cache replacement' (if `freshFor` < `ttl`) - a single goroutine is launched in the background to
   re-fetch a fresh value while serving stale value to readers.
 - Allows strict request coalescing (`EnableStrictCoalescing()` option) - ensures that all returned values are fresh (a
