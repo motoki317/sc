@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// replaceFunc is automatically called when value is not present or expired.
+// The cache makes sure that replaceFunc is always called once for the same key at the same time.
+// When replaceFunc returns an error, value will not be cached.
 type replaceFunc[K comparable, V any] func(ctx context.Context, key K) (V, error)
 
 // NewMust is similar to New, but panics on error.
