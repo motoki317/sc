@@ -456,7 +456,7 @@ func TestCache_Notify(t *testing.T) {
 			t0 := time.Now()
 
 			// Notify value retrieval - this should launch goroutine in background
-			cache.Notify("k1")
+			cache.Notify(context.Background(), "k1")
 			// Test that value is still not here
 			_, ok := cache.GetIfExists("k1")
 			assert.False(t, ok)
@@ -477,7 +477,7 @@ func TestCache_Notify(t *testing.T) {
 			assert.EqualValues(t, 1, cnt)
 
 			// t=750ms, notify once again - this should do *nothing*
-			cache.Notify("k1")
+			cache.Notify(context.Background(), "k1")
 
 			time.Sleep(750 * time.Millisecond)
 			// t=1500ms, assert that value was replaced only once

@@ -127,7 +127,7 @@ retry:
 			cl := &call[V]{}
 			cl.wg.Add(1)
 			c.calls[key] = cl
-			go c.set(context.Background(), cl, key) // Use empty context so as not to be cancelled by the original context
+			go c.set(context.WithoutCancel(ctx), cl, key)
 		}
 		c.stats.GraceHits++
 		c.mu.Unlock()
@@ -187,7 +187,7 @@ func (c *cache[K, V]) GetIfExists(key K) (v V, ok bool) {
 }
 
 // Notify instructs the cache to retrieve value for key if value does not exist or is stale, in a non-blocking manner.
-func (c *cache[K, V]) Notify(key K) {
+func (c *cache[K, V]) Notify(ctx context.Context, key K) {
 	// Record time as soon as Get is called *before acquiring the lock* - this maximizes the reuse of values
 	calledAt := monoTimeNow()
 	c.mu.Lock()
@@ -205,7 +205,7 @@ func (c *cache[K, V]) Notify(key K) {
 		cl := &call[V]{}
 		cl.wg.Add(1)
 		c.calls[key] = cl
-		go c.set(context.Background(), cl, key) // Use empty context so as not to be cancelled by the original context
+		go c.set(context.WithoutCancel(ctx), cl, key)
 	}
 	c.mu.Unlock()
 }
