@@ -185,3 +185,21 @@ func TestCache_Purge(t *testing.T) {
 	_, ok := c.Get(key)
 	require.False(t, ok, "expected not ok")
 }
+
+func TestCache_Size(t *testing.T) {
+	c := lru.New[int, int]()
+
+	require.Equal(t, 0, c.Size())
+
+	c.Set(1, 1)
+	require.Equal(t, 1, c.Size())
+}
+
+func TestCache_Capacity(t *testing.T) {
+	c := lru.New[int, int](lru.WithCapacity(10))
+
+	require.Equal(t, 10, c.Capacity())
+
+	c.Set(1, 1)
+	require.Equal(t, 10, c.Capacity())
+}

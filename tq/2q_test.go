@@ -1,6 +1,7 @@
 package tq
 
 import (
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
 )
@@ -259,4 +260,22 @@ func TestCache(t *testing.T) {
 	if _, ok := l.Get(200); ok {
 		t.Fatalf("should contain nothing")
 	}
+}
+
+func TestCache_Size(t *testing.T) {
+	l := New[int, int](10)
+
+	require.Equal(t, 0, l.Size())
+
+	l.Set(1, 1)
+	require.Equal(t, 1, l.Size())
+}
+
+func TestCache_Capacity(t *testing.T) {
+	l := New[int, int](10)
+
+	require.Equal(t, 10, l.Capacity())
+
+	l.Set(1, 1)
+	require.Equal(t, 10, l.Capacity())
 }

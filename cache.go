@@ -98,7 +98,7 @@ type cache[K comparable, V any] struct {
 	fn               replaceFunc[K, V]
 	freshFor, ttl    time.Duration
 	strictCoalescing bool
-	stats            Stats
+	stats            HitStats
 }
 
 // Get retrieves an item. If an item is not in the cache, it automatically loads a new item into the cache.

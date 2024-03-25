@@ -18,6 +18,11 @@ type backend[K comparable, V any] interface {
 	DeleteIf(predicate func(key K, value V) bool)
 	// Purge all values.
 	Purge()
+
+	// Size returns the number of items currently stored.
+	Size() int
+	// Capacity returns the maximum number of items that can be stored.
+	Capacity() int
 }
 
 type mapBackend[K comparable, V any] map[K]V
@@ -54,6 +59,14 @@ func (m mapBackend[K, V]) Purge() {
 	for key := range m {
 		delete(m, key)
 	}
+}
+
+func (m mapBackend[K, V]) Size() int {
+	return len(m)
+}
+
+func (m mapBackend[K, V]) Capacity() int {
+	return -1
 }
 
 func newLRUBackend[K comparable, V any](cap int) backend[K, V] {

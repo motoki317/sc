@@ -144,3 +144,11 @@ func (c *Cache[K, V]) Purge() {
 	c.recent.Purge()
 	c.recentEvict.Purge()
 }
+
+func (c *Cache[K, V]) Size() int {
+	return c.recent.Size() + c.frequent.Size()
+}
+
+func (c *Cache[K, V]) Capacity() int {
+	return c.size
+}

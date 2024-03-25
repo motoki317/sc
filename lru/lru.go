@@ -118,3 +118,11 @@ func (c *Cache[K, V]) Purge() {
 		delete(c.items, key)
 	}
 }
+
+func (c *Cache[K, V]) Size() int {
+	return c.Len()
+}
+
+func (c *Cache[K, V]) Capacity() int {
+	return c.options.capacity
+}

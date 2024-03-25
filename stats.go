@@ -4,12 +4,7 @@ import (
 	"fmt"
 )
 
-// Stats represents cache metrics.
-//
-// Cache hit ratio can be calculated as:
-//
-//	(cache hit ratio) = (Hits + GraceHits) / (Hits + GraceHits + Misses)
-type Stats struct {
+type HitStats struct {
 	// Hits is the number of fresh cache hits in (*Cache).Get.
 	Hits uint64
 	// GraceHits is the number of stale cache hits in (*Cache).Get.
@@ -21,12 +16,29 @@ type Stats struct {
 	Replacements uint64
 }
 
+type SizeStats struct {
+	// Size is the current number of items in the cache.
+	Size int
+	// Capacity is the maximum number of allowed items in the cache.
+	//
+	// Note that, for map backend, there is no upper bound in number of items in the cache;
+	// Capacity only represents the current cap() of the map.
+	Capacity int
+}
+
+// Stats represents cache metrics.
+type Stats struct {
+	HitStats
+	SizeStats
+}
+
 // String returns formatted string.
 func (s Stats) String() string {
 	return fmt.Sprintf(
-		"Hits: %d, GraceHits: %d, Misses: %d, Replacements: %d, Hit Ratio: %f",
+		"Hits: %d, GraceHits: %d, Misses: %d, Replacements: %d, Hit Ratio: %f, Size: %d, Capacity: %d",
 		s.Hits, s.GraceHits, s.Misses, s.Replacements,
 		s.HitRatio(),
+		s.Size, s.Capacity,
 	)
 }
 
@@ -44,5 +56,11 @@ func (s Stats) HitRatio() float64 {
 func (c *cache[K, V]) Stats() Stats {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.stats
+	return Stats{
+		HitStats: c.stats,
+		SizeStats: SizeStats{
+			Size:     c.values.Size(),
+			Capacity: c.values.Capacity(),
+		},
+	}
 }
