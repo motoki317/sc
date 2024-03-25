@@ -155,7 +155,9 @@ retry:
 	c.calls[key] = cl
 	c.mu.Unlock()
 
-	c.set(ctx, cl, key) // make sure not to hold lock while waiting for value
+	// Make sure not to hold lock while waiting for value.
+	// Use context.WithoutCancel to match the behavior with background fetching.
+	c.set(context.WithoutCancel(ctx), cl, key)
 	return cl.val.v, cl.err
 }
 
