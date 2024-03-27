@@ -7,6 +7,8 @@
 
 sc is a simple in-memory caching layer for golang.
 
+[Introduction slide](https://speakerdeck.com/motoki317/effective-generic-cache-in-golang) (Japanese)
+
 ## Usage
 
 Wrap your function with sc - it will automatically cache the values for specified amount of time, with minimal overhead.
