@@ -21,8 +21,8 @@ type SizeStats struct {
 	Size int
 	// Capacity is the maximum number of allowed items in the cache.
 	//
-	// Note that, for map backend, there is no upper bound in number of items in the cache;
-	// Capacity only represents the current cap() of the map.
+	// Note that, for map backend, there is no upper bound in number of items in the cache.
+	// Therefore, Capacity is always -1 for map backend.
 	Capacity int
 }
 
