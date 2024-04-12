@@ -104,6 +104,14 @@ But that would add whole another level of complexity - sc aims to be a simple ca
 
 ## Inspirations from
 
+I would like to thank the following libraries for giving me ideas:
+
 - [go-chi/stampede: Function and HTTP request coalescer](https://github.com/go-chi/stampede)
+  - For "request coalescing" and "cache layer" idea
 - [singleflight package - golang.org/x/sync/singleflight - pkg.go.dev](https://pkg.go.dev/golang.org/x/sync/singleflight)
+  - For internal implementation
+- [Songmu/smartcache](https://github.com/Songmu/smartcache)
+  - For "graceful replacement" idea
+    - The term "graceful" comes from the [varnish](https://varnish-cache.org/) configuration.
 - [methane/zerotimecache](https://github.com/methane/zerotimecache)
+  - For "zero-time cache" idea
