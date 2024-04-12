@@ -53,7 +53,7 @@ For a more detailed guide, see [reference](https://pkg.go.dev/github.com/motoki3
 ## Supported cache backends (cache replacement policy)
 
 - Built-in map (default)
-  - Note: This backend cannot have max number of items configured. It holds all values in memory until expiration.
+  - Note: This backend cannot have max number of items configured. It holds all values in memory until expiration. For more, see the [documentation](https://pkg.go.dev/github.com/motoki317/sc#WithMapBackend).
 - LRU (Least Recently Used)
 - 2Q (Two Queue Cache)
 

@@ -37,8 +37,14 @@ func defaultConfig(ttl time.Duration) cacheConfig {
 }
 
 // WithMapBackend specifies to use the built-in map for storing cache items (the default).
-// Note that the default map backend will not evict old cache items. If your key's cardinality is high, consider using
-// other backends such as LRU.
+//
+// Note that this default map backend cannot have the maximum number of items configured,
+// so it holds all values in memory until expired values are cleaned regularly
+// at the interval specified by WithCleanupInterval.
+//
+// If your key's cardinality is high and if you would like to hard-limit the cache's memory usage,
+// consider using other backends such as LRU backend.
+//
 // Initial capacity needs to be non-negative.
 func WithMapBackend(initialCapacity int) CacheOption {
 	return func(c *cacheConfig) {
@@ -138,7 +144,7 @@ func EnableStrictCoalescing() CacheOption {
 // WithCleanupInterval specifies cleanup interval of expired items.
 //
 // Setting interval of 0 (or negative) will disable the cleaner.
-// This means if using non-evicting cache backend (that is, the default, built-in map backend),
+// This means if you use non-evicting cache backend (that is, the default, built-in map backend),
 // the cache keeps holding key-value pairs indefinitely.
 // If cardinality of key is very large, this leads to memory leak.
 //
