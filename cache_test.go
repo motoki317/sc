@@ -1175,11 +1175,19 @@ func TestCleaningCacheFinalizer(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			replaceFn := func(_ context.Context, _ struct{}) (string, error) { return "", nil }
-			c, err := New(replaceFn, time.Hour, time.Hour, append(c.cacheOpts, WithCleanupInterval(time.Second))...)
+			// dataType simulates a reference cycle from user-cached data
+			// This is used to check that even in this case, cleanup function is called.
+			type dataType struct {
+				cacheRef any
+			}
+
+			var ca *Cache[struct{}, *dataType]
+			replaceFn := func(_ context.Context, _ struct{}) (*dataType, error) { return &dataType{&ca}, nil }
+			ca, err := New(replaceFn, time.Hour, time.Hour, append(c.cacheOpts, WithCleanupInterval(time.Second))...)
 			assert.NoError(t, err)
 
-			_, _ = c.Get(context.Background(), struct{}{})
+			_, _ = ca.Get(context.Background(), struct{}{})
+			runtime.KeepAlive(c)
 			runtime.GC() // finalizer is called and cleaner is stopped
 		})
 	}
