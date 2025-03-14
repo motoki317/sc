@@ -1175,6 +1175,28 @@ func TestCleaningCacheFinalizer(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
+			replaceFn := func(_ context.Context, _ struct{}) (string, error) { return "value", nil }
+			ca, err := New(replaceFn, time.Hour, time.Hour, append(c.cacheOpts, WithCleanupInterval(time.Second))...)
+			assert.NoError(t, err)
+
+			_, _ = ca.Get(context.Background(), struct{}{})
+			runtime.KeepAlive(ca)
+			runtime.GC() // finalizer is called and cleaner is stopped
+			time.Sleep(1 * time.Second)
+		})
+	}
+}
+
+// TestCleaningCacheFinalizer_ReferenceCycle is like TestCleaningCacheFinalizer, but tests case when cached data contains
+// a reference to *Cache itself.
+func TestCleaningCacheFinalizer_ReferenceCycle(t *testing.T) {
+	t.Parallel()
+
+	for _, c := range allCaches(10) {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
 			// dataType simulates a reference cycle from user-cached data
 			// This is used to check that even in this case, cleanup function is called.
 			type dataType struct {
@@ -1187,8 +1209,9 @@ func TestCleaningCacheFinalizer(t *testing.T) {
 			assert.NoError(t, err)
 
 			_, _ = ca.Get(context.Background(), struct{}{})
-			runtime.KeepAlive(c)
+			runtime.KeepAlive(ca)
 			runtime.GC() // finalizer is called and cleaner is stopped
+			time.Sleep(1 * time.Second)
 		})
 	}
 }
